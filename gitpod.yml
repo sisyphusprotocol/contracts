@@ -1,0 +1,8 @@
+vscode:
+  extensions:
+    - 'dbaeumer.vscode-eslint'
+    - 'eamodio.gitlens'
+    - 'JuanBlanco.solidity'
+    - 'shakram02.bash-beautify'
+    - 'esbenp.prettier-vscode'
+    - 'redjue.git-commit-plugin'
