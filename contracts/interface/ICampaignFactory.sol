@@ -13,5 +13,5 @@ interface ICampaignFactory {
 
   event EvCampaignCreated(address indexed promoter, address indexed campaignAddress);
   event EvWhiteUserSet(address indexed user, bool status);
-  event EvWhiteTokenSet(IERC20 indexed token, bool status);
+  event EvWhiteTokenSet(IERC20 indexed token, uint256 maxAmount);
 }

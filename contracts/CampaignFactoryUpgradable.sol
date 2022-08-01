@@ -6,7 +6,6 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 import './Campaign.sol';
-
 import 'hardhat/console.sol';
 import './interface/ICampaignFactory.sol';
 
@@ -14,8 +13,8 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
   // White list mapping
   mapping(address => bool) public whiteUsers;
 
-  // White list token mapping
-  mapping(IERC20 => bool) public whiteTokens;
+  // White list token mapping, value is max amount for this token
+  mapping(IERC20 => uint256) public whiteTokens;
 
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
@@ -28,9 +27,9 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     emit EvWhiteUserSet(user, status);
   }
 
-  function modifyWhiteToken(IERC20 token, bool status) public onlyOwner {
-    whiteTokens[token] = status;
-    emit EvWhiteTokenSet(token, status);
+  function modifyWhiteToken(IERC20 token, uint256 amount) public onlyOwner {
+    whiteTokens[token] = amount;
+    emit EvWhiteTokenSet(token, amount);
   }
 
   function createCampaign(
@@ -39,6 +38,7 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     string memory name,
     string memory symbol
   ) public override onlyWhiteUser onlyWhiteToken(token) returns (bool) {
+    require(amount < whiteTokens[token], 'CampaignF: amount exceed cap');
     Campaign cam = new Campaign(token, amount, name, symbol);
     emit EvCampaignCreated(msg.sender, address(cam));
     return true;
@@ -50,7 +50,7 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
   }
 
   modifier onlyWhiteToken(IERC20 token) {
-    require(whiteTokens[token], 'CampaignFactory: not whitelist');
+    require(whiteTokens[token] > 0, 'CampaignFactory: not whitelist');
     _;
   }
 }
