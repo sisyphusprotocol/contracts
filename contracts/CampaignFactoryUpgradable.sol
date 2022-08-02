@@ -17,6 +17,8 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
   // White list token mapping, value is max amount for this token
   mapping(IERC20 => uint256) public whiteTokens;
 
+  uint256[50] __gap;
+
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
   function initialize() public initializer {

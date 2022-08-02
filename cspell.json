@@ -53,7 +53,9 @@
     "enumerability",
     "SLOAD",
     "composability",
-    "Hola"
+    "Hola",
+    "ipfs",
+    "Qmxxxxx"
   ],
   "ignorePaths": ["typechain/**", "flatten/**"]
 }

@@ -19,6 +19,11 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 public immutable requiredAmount;
   Consts.CampaignStatus public status;
 
+  uint256 public lastEpochEndTime;
+  uint256 public currentEpoch;
+  uint256 public length;
+  uint256 public period;
+
   mapping(address => uint256) public rewards;
   mapping(address => bool) public registry;
 
@@ -28,8 +33,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   // epoch => user => Record
   mapping(uint256 => mapping(address => Record)) public records;
-
-  uint256[47] __gap;
 
   constructor(
     Consts.CampaignType t,
@@ -43,6 +46,9 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     targetToken = token_;
     requiredAmount = amount_;
     status = Consts.CampaignStatus.NOT_START;
+
+    length = 7;
+    period = 86400;
   }
 
   /**
@@ -52,6 +58,27 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
     rewards[msg.sender] = requiredAmount;
     emit EvRegisterRequest(msg.sender);
+  }
+
+  function start() external onlyOwner onlyStatus(Consts.CampaignStatus.NOT_START) {
+    lastEpochEndTime = block.timestamp;
+    status = Consts.CampaignStatus.ON_GOING;
+  }
+
+  /**
+   * @dev
+   */
+  function checkIn(bytes32 contentUrl) external {
+    _checkEpoch();
+    records[currentEpoch][msg.sender] = Record(contentUrl);
+  }
+
+  function _checkEpoch() internal {
+    if (block.timestamp - lastEpochEndTime > period) {
+      uint256 n = (block.timestamp - lastEpochEndTime) / period;
+      currentEpoch += n;
+      lastEpochEndTime += period * n;
+    }
   }
 
   /**
@@ -84,8 +111,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     }
     return true;
   }
-
-  // function checkIn(string calldata contentUrl) public onlyEOA onlyRegistered {}
 
   modifier onlyStatus(Consts.CampaignStatus requiredStatus) {
     require(status == requiredStatus, 'Campaign: status not met');

@@ -14,5 +14,8 @@ describe('General Test', () => {
     await testErc20.approve(campaign.address, ethers.constants.MaxUint256);
     await campaign.register();
     await campaign.admit([dev.address]);
+
+    await campaign.start();
+    await campaign.checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
   });
 });
