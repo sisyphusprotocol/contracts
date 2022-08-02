@@ -7,6 +7,7 @@ import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/utils/Address.sol';
 import './interface/ICampaign.sol';
 
 contract Campaign is ICampaign, Ownable, ERC721 {
@@ -42,7 +43,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   /**
    * @dev user stake token and want to participate this campaign
    */
-  function register() public override onlyStatus(CampaignStatus.NOT_START) returns (bool) {
+  function register() public override onlyStatus(CampaignStatus.NOT_START) onlyEOA returns (bool) {
     IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
 
     return true;
@@ -77,8 +78,20 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     return true;
   }
 
+  // function checkIn(string calldata contentUrl) public onlyEOA onlyRegistered {}
+
   modifier onlyStatus(CampaignStatus requiredStatus) {
     require(status == requiredStatus, 'Campaign: status not met');
+    _;
+  }
+
+  modifier onlyRegistered() {
+    require(registry[msg.sender], 'Campaign: not registered');
+    _;
+  }
+
+  modifier onlyEOA() {
+    require(!Address.isContract(msg.sender), 'Campaign: only EOA allowed');
     _;
   }
 }
