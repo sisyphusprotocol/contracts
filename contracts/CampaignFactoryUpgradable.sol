@@ -8,6 +8,7 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import './Campaign.sol';
 import 'hardhat/console.sol';
 import './interface/ICampaignFactory.sol';
+import './Consts.sol';
 
 contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, OwnableUpgradeable {
   // White list mapping
@@ -33,13 +34,14 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
   }
 
   function createCampaign(
+    Consts.CampaignType t,
     IERC20 token,
     uint256 amount,
     string memory name,
     string memory symbol
   ) public override onlyWhiteUser onlyWhiteToken(token) returns (bool) {
     require(amount < whiteTokens[token], 'CampaignF: amount exceed cap');
-    Campaign cam = new Campaign(token, amount, name, symbol);
+    Campaign cam = new Campaign(t, token, amount, name, symbol);
     emit EvCampaignCreated(msg.sender, address(cam));
     return true;
   }

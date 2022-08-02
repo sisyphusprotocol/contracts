@@ -10,25 +10,29 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
 import './interface/ICampaign.sol';
 
+import { Consts } from './Consts.sol';
+
 contract Campaign is ICampaign, Ownable, ERC721 {
   using SafeERC20 for IERC20;
 
   IERC20 public immutable targetToken;
   uint256 public immutable requiredAmount;
-  CampaignStatus public status;
+  Consts.CampaignStatus public status;
 
+  mapping(address => uint256) public rewards;
   mapping(address => bool) public registry;
 
-  enum CampaignStatus {
-    IN_VALID,
-    NOT_START,
-    ON_GOING,
-    ENDED
+  struct Record {
+    bytes32 contentUrl;
   }
+
+  // epoch => user => Record
+  mapping(uint256 => mapping(address => Record)) public records;
 
   uint256[47] __gap;
 
   constructor(
+    Consts.CampaignType t,
     IERC20 token_,
     uint256 amount_,
     string memory name_,
@@ -38,26 +42,29 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     require(amount_ != 0, 'Campaign: invalid amount');
     targetToken = token_;
     requiredAmount = amount_;
+    status = Consts.CampaignStatus.NOT_START;
   }
 
   /**
    * @dev user stake token and want to participate this campaign
    */
-  function register() public override onlyStatus(CampaignStatus.NOT_START) onlyEOA returns (bool) {
+  function register() external override onlyStatus(Consts.CampaignStatus.NOT_START) onlyEOA {
     IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
-
-    return true;
+    rewards[msg.sender] = requiredAmount;
+    emit EvRegisterRequest(msg.sender);
   }
 
   /**
    * @dev campaign owner admit several address to participate this campaign
    * @param allowlists allowed address array
    */
-  function admit(address[] calldata allowlists) public onlyStatus(CampaignStatus.NOT_START) onlyOwner returns (bool) {
+  function admit(address[] calldata allowlists) external onlyStatus(Consts.CampaignStatus.NOT_START) onlyOwner {
     for (uint256 i = 1; i < allowlists.length; i++) {
-      registry[allowlists[i]] = true;
+      address user = allowlists[i];
+      require(rewards[user] == requiredAmount, 'Campaign: not registered');
+      registry[user] = true;
+      emit EvRegisterSuccessfully(user);
     }
-    return true;
   }
 
   /**
@@ -67,8 +74,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @param targetStatuses corresponding status array
    */
   function modifyRegistry(address[] calldata lists, bool[] calldata targetStatuses)
-    public
-    onlyStatus(CampaignStatus.NOT_START)
+    external
+    onlyStatus(Consts.CampaignStatus.NOT_START)
     onlyOwner
     returns (bool)
   {
@@ -80,7 +87,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   // function checkIn(string calldata contentUrl) public onlyEOA onlyRegistered {}
 
-  modifier onlyStatus(CampaignStatus requiredStatus) {
+  modifier onlyStatus(Consts.CampaignStatus requiredStatus) {
     require(status == requiredStatus, 'Campaign: status not met');
     _;
   }

@@ -2,9 +2,11 @@
 pragma solidity 0.8.15;
 
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '../Consts.sol';
 
 interface ICampaignFactory {
   function createCampaign(
+    Consts.CampaignType t,
     IERC20 token,
     uint256 amount,
     string memory name,

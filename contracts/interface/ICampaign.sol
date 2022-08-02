@@ -2,5 +2,8 @@
 pragma solidity 0.8.15;
 
 interface ICampaign {
-  function register() external returns (bool);
+  function register() external;
+
+  event EvRegisterRequest(address user);
+  event EvRegisterSuccessfully(address user);
 }

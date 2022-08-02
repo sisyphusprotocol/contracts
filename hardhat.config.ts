@@ -4,6 +4,7 @@ import { HardhatUserConfig, task } from 'hardhat/config';
 import { addFlatTask } from './flat';
 import '@nomiclabs/hardhat-etherscan';
 import '@nomiclabs/hardhat-waffle';
+import '@nomiclabs/hardhat-ethers';
 import '@typechain/hardhat';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
@@ -35,28 +36,9 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 2000,
           },
         },
-      },
-      {
-        version: '0.5.16',
-      },
-      {
-        version: '0.6.6',
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 999999,
-          },
-          evmVersion: 'istanbul',
-        },
-      },
-      {
-        version: '0.4.18',
-      },
-      {
-        version: '0.4.0',
       },
     ],
   },
