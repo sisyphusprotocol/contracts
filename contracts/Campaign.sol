@@ -29,6 +29,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   uint256 public sharedReward;
   address[] public allUsers;
+  uint256 public successUsersCount;
   // Mapping from user address to position in the allUsers array
   mapping(address => uint256) private allUserIndex;
 
@@ -82,7 +83,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
       settle();
     }
 
-    uint256 reward = rewards[msg.sender] + sharedReward / allUsers.length;
+    uint256 reward = rewards[msg.sender] + sharedReward / successUsersCount;
 
     IERC20(targetToken).safeTransfer(msg.sender, reward);
     rewards[msg.sender] = 0;
@@ -93,16 +94,17 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    */
   function settle() public onlyEnded {
     for (uint256 i = 0; i < allUsers.length; i++) {
+      successUsersCount = allUsers.length;
       address user = allUsers[i];
       for (uint256 j = 0; j < length; j++) {
         if (records[j][allUsers[i]].contentUri == bytes32(0)) {
           sharedReward += rewards[user];
           rewards[user] = 0;
-          // TODO: Don't delete, just tag as failure
-          _deleteUserFromAllUsers(user);
+          successUsersCount -= 1;
         }
       }
     }
+    _status = Consts.CampaignStatus.SETTLED;
   }
 
   /**
