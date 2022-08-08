@@ -43,7 +43,7 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     uint256 startTime
   ) public override onlyWhiteUser onlyWhiteToken(token) returns (bool) {
     require(amount < whiteTokens[token], 'CampaignF: amount exceed cap');
-    Campaign cam = new Campaign( token, amount, name, symbol,startTime);
+    Campaign cam = new Campaign(token, amount, name, symbol, startTime);
     emit EvCampaignCreated(msg.sender, address(cam));
     return true;
   }
