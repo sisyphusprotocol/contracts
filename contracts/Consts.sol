@@ -13,6 +13,7 @@ library Consts {
     IN_VALID,
     NOT_START,
     ON_GOING,
-    ENDED
+    ENDED,
+    SETTLED
   }
 }

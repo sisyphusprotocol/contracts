@@ -10,6 +10,8 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
 import './interface/ICampaign.sol';
 
+import 'hardhat/console.sol';
+
 import { Consts } from './Consts.sol';
 
 contract Campaign is ICampaign, Ownable, ERC721 {
@@ -17,18 +19,24 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   IERC20 public immutable targetToken;
   uint256 public immutable requiredAmount;
-  Consts.CampaignStatus public status;
+  Consts.CampaignStatus public _status;
 
   uint256 public lastEpochEndTime;
   uint256 public currentEpoch;
+  uint256 public startTime;
   uint256 public length;
   uint256 public period;
+
+  uint256 public sharedReward;
+  address[] public allUsers;
+  // Mapping from user address to position in the allUsers array
+  mapping(address => uint256) private allUserIndex;
 
   mapping(address => uint256) public rewards;
   mapping(address => bool) public registry;
 
   struct Record {
-    bytes32 contentUrl;
+    bytes32 contentUri;
   }
 
   // epoch => user => Record
@@ -45,35 +53,68 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     require(amount_ != 0, 'Campaign: invalid amount');
     targetToken = token_;
     requiredAmount = amount_;
-    status = Consts.CampaignStatus.NOT_START;
+    _status = Consts.CampaignStatus.NOT_START;
 
-    length = 7;
+    length = 2;
     period = 86400;
   }
 
   /**
    * @dev user stake token and want to participate this campaign
    */
-  function register() external override onlyStatus(Consts.CampaignStatus.NOT_START) onlyEOA {
+  function signUp() external override onlyStatus(Consts.CampaignStatus.NOT_START) onlyEOA {
     IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
     rewards[msg.sender] = requiredAmount;
     emit EvRegisterRequest(msg.sender);
   }
 
   function start() external onlyOwner onlyStatus(Consts.CampaignStatus.NOT_START) {
+    startTime = block.timestamp;
     lastEpochEndTime = block.timestamp;
-    status = Consts.CampaignStatus.ON_GOING;
+    _status = Consts.CampaignStatus.ON_GOING;
   }
 
   /**
-   * @dev
+   * @dev user claim reward after campaign settled
    */
-  function checkIn(bytes32 contentUrl) external {
-    _checkEpoch();
-    records[currentEpoch][msg.sender] = Record(contentUrl);
+  function claim() external {
+    if (_status != Consts.CampaignStatus.SETTLED) {
+      settle();
+    }
+
+    uint256 reward = rewards[msg.sender] + sharedReward / allUsers.length;
+
+    IERC20(targetToken).safeTransfer(msg.sender, reward);
+    rewards[msg.sender] = 0;
   }
 
-  function _checkEpoch() internal {
+  /**
+   * @dev someone will call the function to settle the campaign
+   */
+  function settle() public onlyEnded {
+    for (uint256 i = 0; i < allUsers.length; i++) {
+      address user = allUsers[i];
+      for (uint256 j = 0; j < length; j++) {
+        if (records[j][allUsers[i]].contentUri == bytes32(0)) {
+          sharedReward += rewards[user];
+          rewards[user] = 0;
+          // TODO: Don't delete, just tag as failure
+          _deleteUserFromAllUsers(user);
+        }
+      }
+    }
+  }
+
+  /**
+   * @dev user check in
+   * @param contentUri bytes32 of ipfs uri or other decentralize storage
+   */
+  function checkIn(bytes32 contentUri) external onlyRegistered {
+    _checkEpoch();
+    records[currentEpoch][msg.sender] = Record(contentUri);
+  }
+
+  function _checkEpoch() private {
     if (block.timestamp - lastEpochEndTime > period) {
       uint256 n = (block.timestamp - lastEpochEndTime) / period;
       currentEpoch += n;
@@ -86,10 +127,15 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @param allowlists allowed address array
    */
   function admit(address[] calldata allowlists) external onlyStatus(Consts.CampaignStatus.NOT_START) onlyOwner {
-    for (uint256 i = 1; i < allowlists.length; i++) {
+    for (uint256 i = 0; i < allowlists.length; i++) {
       address user = allowlists[i];
-      require(rewards[user] == requiredAmount, 'Campaign: not registered');
+      require(rewards[user] == requiredAmount, 'Campaign: not signed up');
+      require(!registry[user], 'Campaign: already registered');
       registry[user] = true;
+
+      allUserIndex[user] = allUsers.length;
+      allUsers.push(user);
+
       emit EvRegisterSuccessfully(user);
     }
   }
@@ -107,13 +153,43 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     returns (bool)
   {
     for (uint256 i = 1; i < lists.length; i++) {
-      registry[lists[i]] = targetStatuses[i];
+      address user = lists[i];
+      bool targetStatus = targetStatuses[i];
+      if (targetStatus) {
+        require(!registry[user], 'Campaign: already registered');
+        registry[user] = targetStatus;
+
+        allUserIndex[user] = allUsers.length;
+        allUsers.push(user);
+      } else {
+        require(registry[user], 'Campaign: not yet registered');
+        registry[user] = targetStatus;
+        _deleteUserFromAllUsers(user);
+      }
     }
     return true;
   }
 
+  function _deleteUserFromAllUsers(address user) private {
+    uint256 lastUserIndex = allUsers.length - 1;
+    uint256 userIndex = allUserIndex[user];
+
+    address lastUser = allUsers[lastUserIndex];
+
+    allUsers[lastUserIndex] = lastUser;
+    allUserIndex[lastUser] = userIndex;
+
+    delete allUserIndex[user];
+    allUsers.pop();
+  }
+
+  modifier onlyEnded() {
+    require(block.timestamp > startTime + length * period, 'Campaign: not ended');
+    _;
+  }
+
   modifier onlyStatus(Consts.CampaignStatus requiredStatus) {
-    require(status == requiredStatus, 'Campaign: status not met');
+    require(_status == requiredStatus, 'Campaign: status not met');
     _;
   }
 

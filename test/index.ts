@@ -12,10 +12,29 @@ describe('General Test', () => {
     const campaign = await CampaignF.deploy(1, testErc20.address, 10n * 10n * 18n, 'Test', 'T');
 
     await testErc20.approve(campaign.address, ethers.constants.MaxUint256);
-    await campaign.register();
+    await campaign.signUp();
     await campaign.admit([dev.address]);
 
     await campaign.start();
     await campaign.checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
+
+    let timestampBefore = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp;
+    await ethers.provider.send('evm_mine', [timestampBefore + 86400]);
+
+    await campaign.checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
+
+    console.log(await campaign.currentEpoch());
+
+    timestampBefore = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp;
+    await ethers.provider.send('evm_mine', [timestampBefore + 86400]);
+
+    await campaign.checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
+
+    console.log(await campaign.currentEpoch());
+
+    timestampBefore = (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp;
+    await ethers.provider.send('evm_mine', [timestampBefore + 86400]);
+
+    await campaign.claim();
   });
 });
