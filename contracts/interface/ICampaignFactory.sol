@@ -6,11 +6,11 @@ import '../Consts.sol';
 
 interface ICampaignFactory {
   function createCampaign(
-    Consts.CampaignType t,
     IERC20 token,
     uint256 amount,
     string memory name,
-    string memory symbol
+    string memory symbol,
+    uint256 startTime
   ) external returns (bool success);
 
   event EvCampaignCreated(address indexed promoter, address indexed campaignAddress);

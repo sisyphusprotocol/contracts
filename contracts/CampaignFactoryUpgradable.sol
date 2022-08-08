@@ -36,14 +36,14 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
   }
 
   function createCampaign(
-    Consts.CampaignType t,
     IERC20 token,
     uint256 amount,
     string memory name,
-    string memory symbol
+    string memory symbol,
+    uint256 startTime
   ) public override onlyWhiteUser onlyWhiteToken(token) returns (bool) {
     require(amount < whiteTokens[token], 'CampaignF: amount exceed cap');
-    Campaign cam = new Campaign(t, token, amount, name, symbol);
+    Campaign cam = new Campaign( token, amount, name, symbol,startTime);
     emit EvCampaignCreated(msg.sender, address(cam));
     return true;
   }

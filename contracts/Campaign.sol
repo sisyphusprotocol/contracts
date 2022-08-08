@@ -44,16 +44,19 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   mapping(uint256 => mapping(address => Record)) public records;
 
   constructor(
-    Consts.CampaignType t,
     IERC20 token_,
     uint256 amount_,
     string memory name_,
-    string memory symbol_
+    string memory symbol_,
+    uint256 startTime_
   ) ERC721(name_, symbol_) {
     require(address(token_) != address(0), 'Campaign: invalid token');
     require(amount_ != 0, 'Campaign: invalid amount');
     targetToken = token_;
     requiredAmount = amount_;
+    startTime = startTime_;
+    lastEpochEndTime = startTime_;
+
     _status = Consts.CampaignStatus.NOT_START;
 
     length = 2;
@@ -63,16 +66,10 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   /**
    * @dev user stake token and want to participate this campaign
    */
-  function signUp() external override onlyStatus(Consts.CampaignStatus.NOT_START) onlyEOA {
+  function signUp() external override onlyNotStarted onlyEOA {
     IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
     rewards[msg.sender] = requiredAmount;
     emit EvRegisterRequest(msg.sender);
-  }
-
-  function start() external onlyOwner onlyStatus(Consts.CampaignStatus.NOT_START) {
-    startTime = block.timestamp;
-    lastEpochEndTime = block.timestamp;
-    _status = Consts.CampaignStatus.ON_GOING;
   }
 
   /**
@@ -128,7 +125,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev campaign owner admit several address to participate this campaign
    * @param allowlists allowed address array
    */
-  function admit(address[] calldata allowlists) external onlyStatus(Consts.CampaignStatus.NOT_START) onlyOwner {
+  function admit(address[] calldata allowlists) external onlyNotStarted onlyOwner {
     for (uint256 i = 0; i < allowlists.length; i++) {
       address user = allowlists[i];
       require(rewards[user] == requiredAmount, 'Campaign: not signed up');
@@ -150,7 +147,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    */
   function modifyRegistry(address[] calldata lists, bool[] calldata targetStatuses)
     external
-    onlyStatus(Consts.CampaignStatus.NOT_START)
+    onlyNotStarted
     onlyOwner
     returns (bool)
   {
@@ -190,8 +187,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     _;
   }
 
-  modifier onlyStatus(Consts.CampaignStatus requiredStatus) {
-    require(_status == requiredStatus, 'Campaign: status not met');
+  modifier onlyNotStarted() {
+    require(block.timestamp < startTime, 'Campaign: already started');
     _;
   }
 
