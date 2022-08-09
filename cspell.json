@@ -55,7 +55,8 @@
     "composability",
     "Hola",
     "ipfs",
-    "Qmxxxxx"
+    "Qmxxxxx",
+    "Merkle"
   ],
   "ignorePaths": ["typechain/**", "flatten/**"]
 }

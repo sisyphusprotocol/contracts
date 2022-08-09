@@ -4,6 +4,21 @@ pragma solidity 0.8.15;
 interface ICampaign {
   function signUp() external;
 
-  event EvRegisterRequest(address user);
+  function claim() external;
+
+  function checkIn(bytes32) external;
+
+  function admit(address[] calldata) external;
+
+  event EvSignUp(address user);
+
   event EvRegisterSuccessfully(address user);
+
+  event EvCheckIn(uint256 epoch, address user, bytes32 contentUri);
+
+  event EvModifyRegistry(address[] users, bool[] status);
+
+  event EvClaimReward(address, uint256);
+  // who fail
+  event EvFailure(address);
 }

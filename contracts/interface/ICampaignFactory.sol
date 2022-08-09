@@ -10,7 +10,9 @@ interface ICampaignFactory {
     uint256 amount,
     string memory name,
     string memory symbol,
-    uint256 startTime
+    uint256 startTime,
+    uint256 totalPeriod,
+    uint256 periodLength
   ) external returns (bool success);
 
   event EvCampaignCreated(address indexed promoter, address indexed campaignAddress);

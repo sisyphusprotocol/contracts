@@ -14,6 +14,8 @@ import 'hardhat/console.sol';
 
 import { Consts } from './Consts.sol';
 
+// TODO: merkle tree root to valid user, don't use enumerable
+
 contract Campaign is ICampaign, Ownable, ERC721 {
   using SafeERC20 for IERC20;
 
@@ -24,7 +26,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 public lastEpochEndTime;
   uint256 public currentEpoch;
   uint256 public startTime;
-  uint256 public length;
+  uint256 public totalPeriod;
   uint256 public period;
 
   uint256 public sharedReward;
@@ -33,7 +35,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   // Mapping from user address to position in the allUsers array
   mapping(address => uint256) private allUserIndex;
 
-  mapping(address => uint256) public rewards;
+  mapping(address => uint256) private _rewards;
   mapping(address => bool) public registry;
 
   struct Record {
@@ -48,7 +50,9 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     uint256 amount_,
     string memory name_,
     string memory symbol_,
-    uint256 startTime_
+    uint256 startTime_,
+    uint256 totalPeriod_,
+    uint256 periodLength_
   ) ERC721(name_, symbol_) {
     require(address(token_) != address(0), 'Campaign: invalid token');
     require(amount_ != 0, 'Campaign: invalid amount');
@@ -56,11 +60,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     requiredAmount = amount_;
     startTime = startTime_;
     lastEpochEndTime = startTime_;
-
-    _status = Consts.CampaignStatus.NOT_START;
-
-    length = 2;
-    period = 86400;
+    totalPeriod = totalPeriod_;
+    period = periodLength_;
   }
 
   /**
@@ -68,22 +69,24 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    */
   function signUp() external override onlyNotStarted onlyEOA {
     IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
-    rewards[msg.sender] = requiredAmount;
-    emit EvRegisterRequest(msg.sender);
+    _rewards[msg.sender] = requiredAmount;
+    emit EvSignUp(msg.sender);
   }
 
   /**
    * @dev user claim reward after campaign settled
    */
-  function claim() external {
+  function claim() external override {
     if (_status != Consts.CampaignStatus.SETTLED) {
       settle();
     }
 
-    uint256 reward = rewards[msg.sender] + sharedReward / successUsersCount;
+    uint256 reward = _rewards[msg.sender] + sharedReward / successUsersCount;
 
     IERC20(targetToken).safeTransfer(msg.sender, reward);
-    rewards[msg.sender] = 0;
+    _rewards[msg.sender] = 0;
+
+    emit EvClaimReward(msg.sender, reward);
   }
 
   /**
@@ -93,11 +96,12 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     for (uint256 i = 0; i < allUsers.length; i++) {
       successUsersCount = allUsers.length;
       address user = allUsers[i];
-      for (uint256 j = 0; j < length; j++) {
+      for (uint256 j = 0; j < totalPeriod; j++) {
         if (records[j][allUsers[i]].contentUri == bytes32(0)) {
-          sharedReward += rewards[user];
-          rewards[user] = 0;
+          sharedReward += _rewards[user];
+          _rewards[user] = 0;
           successUsersCount -= 1;
+          emit EvFailure(user);
         }
       }
     }
@@ -108,9 +112,11 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev user check in
    * @param contentUri bytes32 of ipfs uri or other decentralize storage
    */
-  function checkIn(bytes32 contentUri) external onlyRegistered {
+  function checkIn(bytes32 contentUri) external override onlyRegistered {
     _checkEpoch();
     records[currentEpoch][msg.sender] = Record(contentUri);
+
+    emit EvCheckIn(currentEpoch, msg.sender, contentUri);
   }
 
   function _checkEpoch() private {
@@ -128,7 +134,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   function admit(address[] calldata allowlists) external onlyNotStarted onlyOwner {
     for (uint256 i = 0; i < allowlists.length; i++) {
       address user = allowlists[i];
-      require(rewards[user] == requiredAmount, 'Campaign: not signed up');
+      require(_rewards[user] == requiredAmount, 'Campaign: not signed up');
       require(!registry[user], 'Campaign: already registered');
       registry[user] = true;
 
@@ -145,12 +151,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @param lists modified address list array
    * @param targetStatuses corresponding status array
    */
-  function modifyRegistry(address[] calldata lists, bool[] calldata targetStatuses)
-    external
-    onlyNotStarted
-    onlyOwner
-    returns (bool)
-  {
+  function modifyRegistry(address[] calldata lists, bool[] calldata targetStatuses) external onlyNotStarted onlyOwner {
     for (uint256 i = 1; i < lists.length; i++) {
       address user = lists[i];
       bool targetStatus = targetStatuses[i];
@@ -166,7 +167,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
         _deleteUserFromAllUsers(user);
       }
     }
-    return true;
+    emit EvModifyRegistry(lists, targetStatuses);
   }
 
   function _deleteUserFromAllUsers(address user) private {
@@ -183,7 +184,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   modifier onlyEnded() {
-    require(block.timestamp > startTime + length * period, 'Campaign: not ended');
+    require(block.timestamp > startTime + totalPeriod * period, 'Campaign: not ended');
     _;
   }
 

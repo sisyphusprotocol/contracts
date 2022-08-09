@@ -40,10 +40,12 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     uint256 amount,
     string memory name,
     string memory symbol,
-    uint256 startTime
+    uint256 startTime,
+    uint256 totalPeriod,
+    uint256 periodLength
   ) public override onlyWhiteUser onlyWhiteToken(token) returns (bool) {
     require(amount < whiteTokens[token], 'CampaignF: amount exceed cap');
-    Campaign cam = new Campaign(token, amount, name, symbol, startTime);
+    Campaign cam = new Campaign(token, amount, name, symbol, startTime, totalPeriod, periodLength);
     emit EvCampaignCreated(msg.sender, address(cam));
     return true;
   }
