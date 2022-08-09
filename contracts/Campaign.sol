@@ -19,21 +19,23 @@ import { Consts } from './Consts.sol';
 contract Campaign is ICampaign, Ownable, ERC721 {
   using SafeERC20 for IERC20;
 
-  IERC20 public immutable targetToken;
-  uint256 public immutable requiredAmount;
-  Consts.CampaignStatus public _status;
+  IERC20 private immutable _targetToken;
+  uint256 private immutable _requiredAmount;
+  Consts.CampaignStatus private _status;
 
-  uint256 public lastEpochEndTime;
+  uint256 private _lastEpochEndTime;
   uint256 public currentEpoch;
-  uint256 public startTime;
-  uint256 public totalPeriod;
-  uint256 public period;
+  uint256 private _startTime;
+  uint256 private _totalPeriod;
+  uint256 private _period;
 
   uint256 public sharedReward;
+  uint256 public hostReward;
+  uint256 public protocolFee;
   address[] public allUsers;
   uint256 public successUsersCount;
   // Mapping from user address to position in the allUsers array
-  mapping(address => uint256) private allUserIndex;
+  mapping(address => uint256) private _allUserIndex;
 
   mapping(address => uint256) private _rewards;
   mapping(address => bool) public registry;
@@ -56,20 +58,22 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   ) ERC721(name_, symbol_) {
     require(address(token_) != address(0), 'Campaign: invalid token');
     require(amount_ != 0, 'Campaign: invalid amount');
-    targetToken = token_;
-    requiredAmount = amount_;
-    startTime = startTime_;
-    lastEpochEndTime = startTime_;
-    totalPeriod = totalPeriod_;
-    period = periodLength_;
+    _targetToken = token_;
+    _requiredAmount = amount_;
+    _startTime = startTime_;
+    _lastEpochEndTime = startTime_;
+    _totalPeriod = totalPeriod_;
+    _period = periodLength_;
   }
 
+  //  polygon 100GWEI 100万  0.1matic
+  //
   /**
    * @dev user stake token and want to participate this campaign
    */
   function signUp() external override onlyNotStarted onlyEOA {
-    IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
-    _rewards[msg.sender] = requiredAmount;
+    IERC20(_targetToken).safeTransferFrom(msg.sender, address(this), _requiredAmount);
+    _rewards[msg.sender] = _requiredAmount;
     emit EvSignUp(msg.sender);
   }
 
@@ -83,10 +87,23 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
     uint256 reward = _rewards[msg.sender] + sharedReward / successUsersCount;
 
-    IERC20(targetToken).safeTransfer(msg.sender, reward);
+    IERC20(_targetToken).safeTransfer(msg.sender, reward);
     _rewards[msg.sender] = 0;
 
     emit EvClaimReward(msg.sender, reward);
+  }
+
+  /**
+   * @dev host withdraw host reward
+   */
+  function withdraw() external onlyOwner onlySettled {
+    uint256 reward = hostReward;
+    hostReward = 0;
+    IERC20(_targetToken).safeTransfer(msg.sender, reward);
+
+    IERC20(_targetToken).safeTransferFrom(address(this), Consts.PROTOCOL_RECIPIENT, protocolFee);
+
+    emit EvWithDraw(msg.sender, reward, protocolFee);
   }
 
   /**
@@ -96,9 +113,12 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     for (uint256 i = 0; i < allUsers.length; i++) {
       successUsersCount = allUsers.length;
       address user = allUsers[i];
-      for (uint256 j = 0; j < totalPeriod; j++) {
+      for (uint256 j = 0; j < _totalPeriod; j++) {
         if (records[j][allUsers[i]].contentUri == bytes32(0)) {
-          sharedReward += _rewards[user];
+          uint256 penalty = _rewards[user];
+          hostReward = (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
+          protocolFee = (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
+          sharedReward += penalty - hostReward - protocolFee;
           _rewards[user] = 0;
           successUsersCount -= 1;
           emit EvFailure(user);
@@ -120,10 +140,10 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   function _checkEpoch() private {
-    if (block.timestamp - lastEpochEndTime > period) {
-      uint256 n = (block.timestamp - lastEpochEndTime) / period;
+    if (block.timestamp - _lastEpochEndTime > _period) {
+      uint256 n = (block.timestamp - _lastEpochEndTime) / _period;
       currentEpoch += n;
-      lastEpochEndTime += period * n;
+      _lastEpochEndTime += _period * n;
     }
   }
 
@@ -134,11 +154,11 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   function admit(address[] calldata allowlists) external onlyNotStarted onlyOwner {
     for (uint256 i = 0; i < allowlists.length; i++) {
       address user = allowlists[i];
-      require(_rewards[user] == requiredAmount, 'Campaign: not signed up');
+      require(_rewards[user] == _requiredAmount, 'Campaign: not signed up');
       require(!registry[user], 'Campaign: already registered');
       registry[user] = true;
 
-      allUserIndex[user] = allUsers.length;
+      _allUserIndex[user] = allUsers.length;
       allUsers.push(user);
 
       emit EvRegisterSuccessfully(user);
@@ -159,7 +179,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
         require(!registry[user], 'Campaign: already registered');
         registry[user] = targetStatus;
 
-        allUserIndex[user] = allUsers.length;
+        _allUserIndex[user] = allUsers.length;
         allUsers.push(user);
       } else {
         require(registry[user], 'Campaign: not yet registered');
@@ -172,24 +192,29 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   function _deleteUserFromAllUsers(address user) private {
     uint256 lastUserIndex = allUsers.length - 1;
-    uint256 userIndex = allUserIndex[user];
+    uint256 userIndex = _allUserIndex[user];
 
     address lastUser = allUsers[lastUserIndex];
 
     allUsers[lastUserIndex] = lastUser;
-    allUserIndex[lastUser] = userIndex;
+    _allUserIndex[lastUser] = userIndex;
 
-    delete allUserIndex[user];
+    delete _allUserIndex[user];
     allUsers.pop();
   }
 
+  modifier onlySettled() {
+    require(_status == Consts.CampaignStatus.SETTLED, 'Campaign: not settled');
+    _;
+  }
+
   modifier onlyEnded() {
-    require(block.timestamp > startTime + totalPeriod * period, 'Campaign: not ended');
+    require(block.timestamp > _startTime + _totalPeriod * _period, 'Campaign: not ended');
     _;
   }
 
   modifier onlyNotStarted() {
-    require(block.timestamp < startTime, 'Campaign: already started');
+    require(block.timestamp < _startTime, 'Campaign: already started');
     _;
   }
 

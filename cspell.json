@@ -56,7 +56,8 @@
     "Hola",
     "ipfs",
     "Qmxxxxx",
-    "Merkle"
+    "Merkle",
+    "vitalik"
   ],
   "ignorePaths": ["typechain/**", "flatten/**"]
 }

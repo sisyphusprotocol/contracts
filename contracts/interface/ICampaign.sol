@@ -2,13 +2,17 @@
 pragma solidity 0.8.15;
 
 interface ICampaign {
+  // user sign up the campaign
   function signUp() external;
 
-  function claim() external;
+  // host allow user to participate
+  function admit(address[] calldata) external;
 
+  // user check at a fixed frequency
   function checkIn(bytes32) external;
 
-  function admit(address[] calldata) external;
+  // user claim reward after campaign ended
+  function claim() external;
 
   event EvSignUp(address user);
 
@@ -21,4 +25,6 @@ interface ICampaign {
   event EvClaimReward(address, uint256);
   // who fail
   event EvFailure(address);
+
+  event EvWithDraw(address host, uint256, uint256);
 }
