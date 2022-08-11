@@ -5,6 +5,7 @@ import { addFlatTask } from './flat';
 import '@nomiclabs/hardhat-etherscan';
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ethers';
+import 'hardhat-deploy';
 import '@typechain/hardhat';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
@@ -53,14 +54,30 @@ const config: HardhatUserConfig = {
       gas: 'auto',
       gasPrice: 'auto',
     },
-    rinkeby: {
-      url: process.env.RINKEBY_URL || '',
+    georli: {
+      url: process.env.GEORLI_URL || '',
+      live: true,
       accounts: accounts,
+      deploy: ['deploy/georli'],
     },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: 'USD',
+  },
+  namedAccounts: {
+    deployer: {
+      default: 0,
+      georli: 0,
+    },
+  },
+
+  external: {
+    contracts: [
+      {
+        artifacts: 'node_modules/@openzeppelin/upgrades-core/artifacts/@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol/',
+      },
+    ],
   },
 };
 

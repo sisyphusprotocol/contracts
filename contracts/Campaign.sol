@@ -66,7 +66,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     _period = periodLength_;
   }
 
-  //  polygon 100GWEI 100万  0.1matic
   //
   /**
    * @dev user stake token and want to participate this campaign
@@ -82,7 +81,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    */
   function claim() external override {
     if (_status != Consts.CampaignStatus.SETTLED) {
-      settle();
+      _settle();
     }
 
     uint256 reward = _rewards[msg.sender] + sharedReward / successUsersCount;
@@ -109,7 +108,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   /**
    * @dev someone will call the function to settle the campaign
    */
-  function settle() public onlyEnded {
+  function _settle() private onlyEnded {
     for (uint256 i = 0; i < allUsers.length; i++) {
       successUsersCount = allUsers.length;
       address user = allUsers[i];

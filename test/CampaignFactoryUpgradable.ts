@@ -1,26 +1,46 @@
+import { getNamedAccounts, ethers } from 'hardhat';
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
 
-async function getCurrentTime() {
-  return (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp;
-}
+import { getCurrentTime, TimeGo, getContract } from './utils';
+import { Contract, ContractReceipt, ContractTransaction } from 'ethers';
 
-async function TimeGo(s: number) {
-  await ethers.provider.send('evm_mine', [(await getCurrentTime()) + s]);
-}
+describe('CampaignFactoryUpgradable', () => {
+  let campaignFactory: Contract;
+  let testErc20: Contract;
+  let deployer: string;
 
-describe('General Test', () => {
-  it('1', async () => {
-    const [dev, ...users] = await ethers.getSigners();
+  before(async () => {
+    campaignFactory = await getContract('CampaignFactoryUpgradable');
+    testErc20 = await getContract('TestERC20');
+    deployer = (await getNamedAccounts()).deployer;
+  });
 
-    const TestERC20F = await ethers.getContractFactory('TestERC20');
-
-    const testErc20 = await TestERC20F.deploy('TestERC20', 'TE', 100n * 10n * 18n);
+  it('Factory', async () => {
+    const testErc20 = await getContract('TestERC20');
 
     const requiredAmount = 10n * 10n * 18n;
 
-    const CampaignF = await ethers.getContractFactory('Campaign');
-    const campaign = await CampaignF.deploy(
+    await campaignFactory.modifyWhiteUser(deployer, true);
+
+    await campaignFactory.modifyWhiteToken(testErc20.address, ethers.utils.parseEther('100'));
+
+    await campaignFactory.createCampaign(
+      testErc20.address,
+      requiredAmount,
+      'Test',
+      'T',
+      (await getCurrentTime()) + 86400,
+      2,
+      86400,
+    );
+  });
+
+  it('Campaign', async () => {
+    const users = await ethers.getSigners();
+
+    const requiredAmount = 10n * 10n * 18n;
+
+    const tx: ContractTransaction = await campaignFactory.createCampaign(
       testErc20.address,
       requiredAmount,
       'Test',
@@ -30,8 +50,13 @@ describe('General Test', () => {
       86400,
     );
 
-    await testErc20.approve(campaign.address, ethers.constants.MaxUint256);
-    await campaign.signUp();
+    const receipt: ContractReceipt = await tx.wait();
+
+    const c = receipt.events?.filter((x) => {
+      return x.event === 'EvCampaignCreated';
+    });
+
+    const campaign = await ethers.getContractAt('Campaign', c![0].args!.campaignAddress);
 
     for (const user of users) {
       await testErc20.mint(user.address, requiredAmount);
@@ -40,7 +65,6 @@ describe('General Test', () => {
     }
 
     await campaign.admit([
-      dev.address,
       ...users.map((user) => {
         return user.address;
       }),

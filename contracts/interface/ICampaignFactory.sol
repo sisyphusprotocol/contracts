@@ -13,7 +13,7 @@ interface ICampaignFactory {
     uint256 startTime,
     uint256 totalPeriod,
     uint256 periodLength
-  ) external returns (bool success);
+  ) external;
 
   event EvCampaignCreated(address indexed promoter, address indexed campaignAddress);
   event EvWhiteUserSet(address indexed user, bool status);

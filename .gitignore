@@ -10,3 +10,4 @@ artifacts
 .openzeppelin
 flatten
 .deps
+yarn-error.log
