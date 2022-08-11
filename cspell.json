@@ -58,7 +58,8 @@
     "Qmxxxxx",
     "Merkle",
     "vitalik",
-    "georli"
+    "georli",
+    "REKT"
   ],
   "ignorePaths": ["typechain/**", "flatten/**"]
 }

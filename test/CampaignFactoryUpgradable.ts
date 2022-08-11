@@ -2,7 +2,7 @@ import { getNamedAccounts, ethers } from 'hardhat';
 import { expect } from 'chai';
 
 import { getCurrentTime, TimeGo, getContract } from './utils';
-import { Contract, ContractReceipt, ContractTransaction } from 'ethers';
+import { BigNumber, Contract, ContractReceipt, ContractTransaction } from 'ethers';
 
 describe('CampaignFactoryUpgradable', () => {
   let campaignFactory: Contract;
@@ -29,7 +29,7 @@ describe('CampaignFactoryUpgradable', () => {
       requiredAmount,
       'Test',
       'T',
-      (await getCurrentTime()) + 86400,
+      (await getCurrentTime()) + 86400 / 2,
       2,
       86400,
     );
@@ -58,48 +58,56 @@ describe('CampaignFactoryUpgradable', () => {
 
     const campaign = await ethers.getContractAt('Campaign', c![0].args!.campaignAddress);
 
+    const holderInfo: {
+      [x: string]: BigNumber;
+    } = {};
+
     for (const user of users) {
       await testErc20.mint(user.address, requiredAmount);
       await testErc20.connect(user).approve(campaign.address, ethers.constants.MaxUint256);
-      await campaign.connect(user).signUp();
+      const tx: ContractTransaction = await campaign.connect(user).signUp();
+      const receipt: ContractReceipt = await tx.wait();
+
+      const c = receipt.events?.filter((x) => {
+        return x.event === 'EvSignUp';
+      });
+
+      holderInfo[user.address] = c![0].args!.tokenId;
     }
 
     await campaign.admit([
       ...users.map((user) => {
-        return user.address;
+        return holderInfo[user.address];
       }),
     ]);
 
     await TimeGo(86400);
 
+    for (const user of users) {
+      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'), holderInfo[user.address]);
+    }
+
     expect(await campaign.currentEpoch()).to.be.equal(0);
-    await campaign.checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
-    for (const user of users) {
-      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
-    }
 
     await TimeGo(86400);
 
-    await campaign.checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
+    for (const user of users) {
+      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'), holderInfo[user.address]);
+    }
+
     expect(await campaign.currentEpoch()).to.be.equal(1);
-    for (const user of users) {
-      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
-    }
 
     await TimeGo(86400);
 
-    await campaign.checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
     for (const user of users) {
-      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'));
+      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'), holderInfo[user.address]);
     }
     expect(await campaign.currentEpoch()).to.be.equal(2);
 
     await TimeGo(86400);
 
-    await campaign.claim();
     for (const user of users) {
-      await campaign.connect(user).claim();
-
+      await campaign.connect(user).claim(holderInfo[user.address]);
       expect(await testErc20.balanceOf(user.address)).to.be.equal(requiredAmount);
     }
   });

@@ -29,23 +29,37 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 private _totalPeriod;
   uint256 private _period;
 
+  uint256 private _idx;
+
   uint256 public sharedReward;
   uint256 public hostReward;
   uint256 public protocolFee;
-  address[] public allUsers;
-  uint256 public successUsersCount;
-  // Mapping from user address to position in the allUsers array
-  mapping(address => uint256) private _allUserIndex;
+  uint256 public successTokensCount;
 
-  mapping(address => uint256) private _rewards;
-  mapping(address => bool) public registry;
+  // epoch => tokenId => Record
+  mapping(uint256 => mapping(uint256 => Record)) public records;
+
+  // tokenId => token status
+  mapping(uint256 => TokenProperty) public properties;
+
+  struct TokenProperty {
+    TokenStatus tokenStatus;
+    uint256 pendingReward;
+  }
+
+  enum TokenStatus {
+    INVALID,
+    EXIT,
+    SIGNED,
+    ADMITTED,
+    ACHIEVED,
+    FAILED,
+    REKT
+  }
 
   struct Record {
     bytes32 contentUri;
   }
-
-  // epoch => user => Record
-  mapping(uint256 => mapping(address => Record)) public records;
 
   constructor(
     IERC20 token_,
@@ -71,23 +85,34 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev user stake token and want to participate this campaign
    */
   function signUp() external override onlyNotStarted onlyEOA {
+    require(balanceOf(msg.sender) == 0, 'Campaign: already signed');
+
     IERC20(_targetToken).safeTransferFrom(msg.sender, address(this), _requiredAmount);
-    _rewards[msg.sender] = _requiredAmount;
-    emit EvSignUp(msg.sender);
+
+    uint256 tokenId = _idx;
+    _idx += 1;
+
+    _safeMint(msg.sender, tokenId);
+
+    properties[tokenId].tokenStatus = TokenStatus.SIGNED;
+    properties[tokenId].pendingReward = _requiredAmount;
+
+    emit EvSignUp(tokenId);
   }
 
   /**
    * @dev user claim reward after campaign settled
    */
-  function claim() external override {
+  function claim(uint256 tokenId) external override onlyTokenHolder(tokenId) {
     if (_status != Consts.CampaignStatus.SETTLED) {
       _settle();
     }
 
-    uint256 reward = _rewards[msg.sender] + sharedReward / successUsersCount;
+    uint256 reward = properties[tokenId].pendingReward + sharedReward / successTokensCount;
 
     IERC20(_targetToken).safeTransfer(msg.sender, reward);
-    _rewards[msg.sender] = 0;
+
+    properties[tokenId].pendingReward = 0;
 
     emit EvClaimReward(msg.sender, reward);
   }
@@ -109,18 +134,17 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev someone will call the function to settle the campaign
    */
   function _settle() private onlyEnded {
-    for (uint256 i = 0; i < allUsers.length; i++) {
-      successUsersCount = allUsers.length;
-      address user = allUsers[i];
+    for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
+      successTokensCount = _idx;
       for (uint256 j = 0; j < _totalPeriod; j++) {
-        if (records[j][allUsers[i]].contentUri == bytes32(0)) {
-          uint256 penalty = _rewards[user];
+        if (records[j][tokenId].contentUri == bytes32(0)) {
+          uint256 penalty = properties[tokenId].pendingReward;
           hostReward = (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
           protocolFee = (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
           sharedReward += penalty - hostReward - protocolFee;
-          _rewards[user] = 0;
-          successUsersCount -= 1;
-          emit EvFailure(user);
+          properties[tokenId].pendingReward = 0;
+          successTokensCount -= 1;
+          emit EvFailure(ownerOf(tokenId));
         }
       }
     }
@@ -131,11 +155,11 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev user check in
    * @param contentUri bytes32 of ipfs uri or other decentralize storage
    */
-  function checkIn(bytes32 contentUri) external override onlyRegistered {
+  function checkIn(bytes32 contentUri, uint256 tokenId) external override onlyTokenHolder(tokenId) onlyAdmitted(tokenId) {
     _checkEpoch();
-    records[currentEpoch][msg.sender] = Record(contentUri);
+    records[currentEpoch][tokenId] = Record(contentUri);
 
-    emit EvCheckIn(currentEpoch, msg.sender, contentUri);
+    emit EvCheckIn(currentEpoch, tokenId, contentUri);
   }
 
   function _checkEpoch() private {
@@ -148,58 +172,47 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   /**
    * @dev campaign owner admit several address to participate this campaign
-   * @param allowlists allowed address array
+   * @param allowlists allowed tokenId array
    */
-  function admit(address[] calldata allowlists) external onlyNotStarted onlyOwner {
+  function admit(uint256[] calldata allowlists) external onlyNotStarted onlyOwner {
     for (uint256 i = 0; i < allowlists.length; i++) {
-      address user = allowlists[i];
-      require(_rewards[user] == _requiredAmount, 'Campaign: not signed up');
-      require(!registry[user], 'Campaign: already registered');
-      registry[user] = true;
+      uint256 tokenId = allowlists[i];
 
-      _allUserIndex[user] = allUsers.length;
-      allUsers.push(user);
+      TokenProperty memory property = properties[tokenId];
 
-      emit EvRegisterSuccessfully(user);
+      require(property.pendingReward == _requiredAmount, 'Campaign: stake not match');
+      require(property.tokenStatus == TokenStatus.SIGNED, 'Campaign: not signed up');
+
+      properties[tokenId].tokenStatus = TokenStatus.ADMITTED;
+
+      emit EvRegisterSuccessfully(tokenId);
     }
   }
 
   /**
    * @dev once campaign owner admit some address by mistake
    * @dev can modify via this function but more gas-expensive
-   * @param lists modified address list array
+   * @param lists modified tokenId list array
    * @param targetStatuses corresponding status array
    */
-  function modifyRegistry(address[] calldata lists, bool[] calldata targetStatuses) external onlyNotStarted onlyOwner {
+  function modifyRegistry(uint256[] calldata lists, bool[] calldata targetStatuses) external onlyNotStarted onlyOwner {
     for (uint256 i = 1; i < lists.length; i++) {
-      address user = lists[i];
+      uint256 tokenId = lists[i];
       bool targetStatus = targetStatuses[i];
       if (targetStatus) {
-        require(!registry[user], 'Campaign: already registered');
-        registry[user] = targetStatus;
-
-        _allUserIndex[user] = allUsers.length;
-        allUsers.push(user);
+        require(properties[tokenId].tokenStatus == TokenStatus.SIGNED, 'Campaign: not signed');
+        properties[tokenId].tokenStatus = TokenStatus.ADMITTED;
       } else {
-        require(registry[user], 'Campaign: not yet registered');
-        registry[user] = targetStatus;
-        _deleteUserFromAllUsers(user);
+        require(properties[tokenId].tokenStatus == TokenStatus.ADMITTED, 'Campaign: not admitted');
+        properties[tokenId].tokenStatus = TokenStatus.SIGNED;
       }
     }
     emit EvModifyRegistry(lists, targetStatuses);
   }
 
-  function _deleteUserFromAllUsers(address user) private {
-    uint256 lastUserIndex = allUsers.length - 1;
-    uint256 userIndex = _allUserIndex[user];
-
-    address lastUser = allUsers[lastUserIndex];
-
-    allUsers[lastUserIndex] = lastUser;
-    _allUserIndex[lastUser] = userIndex;
-
-    delete _allUserIndex[user];
-    allUsers.pop();
+  modifier onlyTokenHolder(uint256 tokenId) {
+    require(ownerOf(tokenId) == msg.sender, 'Campaign: not token holder');
+    _;
   }
 
   modifier onlySettled() {
@@ -217,8 +230,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     _;
   }
 
-  modifier onlyRegistered() {
-    require(registry[msg.sender], 'Campaign: not registered');
+  modifier onlyAdmitted(uint256 tokenId) {
+    require(properties[tokenId].tokenStatus == TokenStatus.ADMITTED, 'Campaign: not admitted');
     _;
   }
 
