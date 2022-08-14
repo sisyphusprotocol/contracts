@@ -11,6 +11,9 @@ interface ICampaign {
   // user check at a fixed frequency
   function checkIn(bytes32, uint256) external;
 
+  // settle the reward
+  function settle() external;
+
   // user claim reward after campaign ended
   function claim(uint256 tokenId) external;
 

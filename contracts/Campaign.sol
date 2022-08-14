@@ -134,6 +134,13 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   /**
+   * @dev everyone can call the function to settle reward
+   */
+  function settle() external override {
+    _settle();
+  }
+
+  /**
    * @dev someone will call the function to settle the campaign
    */
   function _settle() private onlyEnded {
