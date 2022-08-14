@@ -17,6 +17,10 @@ interface ICampaign {
   // user claim reward after campaign ended
   function claim(uint256 tokenId) external;
 
+  function tokenAddress() external returns (address);
+
+  function tokenAmount() external returns (uint256);
+
   event EvSignUp(uint256 tokenId);
 
   event EvRegisterSuccessfully(uint256 tokenId);

@@ -61,6 +61,14 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     bytes32 contentUri;
   }
 
+  function tokenAddress() public view override returns (address) {
+    return address(_targetToken);
+  }
+
+  function tokenAmount() public view override returns (uint256) {
+    return _requiredAmount;
+  }
+
   constructor(
     IERC20 token_,
     uint256 amount_,
