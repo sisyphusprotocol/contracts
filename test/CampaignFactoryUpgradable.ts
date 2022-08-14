@@ -110,11 +110,19 @@ describe('CampaignFactoryUpgradable', () => {
     for (const user of users.slice(1)) {
       await campaign.connect(user).claim(holderInfo[user.address]);
       expect(await testErc20.balanceOf(user.address)).to.be.equal(
-        requiredAmount + (((requiredAmount * (20n - 19n)) / 19n) * (10n ** 6n - PROTOCOL_FEE - HOST_REWARD)) / 10n ** 6n,
+        requiredAmount + (requiredAmount * 1n * (10n ** 6n - PROTOCOL_FEE - HOST_REWARD)) / 10n ** 6n / 19n,
       );
     }
 
     await campaign.connect(users[0]).claim(holderInfo[users[0].address]);
     expect(await testErc20.balanceOf(users[0].address)).to.be.equal(0);
+
+    await campaign.connect(users[0]).withdraw();
+
+    expect(await testErc20.balanceOf(users[0].address)).to.be.equal((requiredAmount * HOST_REWARD) / 10n ** 6n);
+
+    expect(await testErc20.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')).to.be.equal(
+      (requiredAmount * PROTOCOL_FEE) / 10n ** 6n,
+    );
   });
 });

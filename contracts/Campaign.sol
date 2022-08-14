@@ -125,9 +125,10 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   function withdraw() external onlyOwner onlySettled {
     uint256 reward = hostReward;
     hostReward = 0;
+
     IERC20(_targetToken).safeTransfer(msg.sender, reward);
 
-    IERC20(_targetToken).safeTransferFrom(address(this), Consts.PROTOCOL_RECIPIENT, protocolFee);
+    IERC20(_targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, protocolFee);
 
     emit EvWithDraw(msg.sender, reward, protocolFee);
   }
