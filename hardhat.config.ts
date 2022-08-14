@@ -60,6 +60,12 @@ const config: HardhatUserConfig = {
       accounts: accounts,
       deploy: ['deploy/georli'],
     },
+    mumbai: {
+      url: process.env.MUMBAI_URL || '',
+      live: true,
+      accounts: accounts,
+      deploy: ['deploy/mumbai'],
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
