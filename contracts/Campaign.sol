@@ -26,7 +26,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 private _lastEpochEndTime;
   uint256 public currentEpoch;
   uint256 private _startTime;
-  uint256 private _totalPeriod;
+  uint256 private _totalEpochsCount;
   uint256 private _period;
 
   uint256 private _idx;
@@ -76,7 +76,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     _requiredAmount = amount_;
     _startTime = startTime_;
     _lastEpochEndTime = startTime_;
-    _totalPeriod = totalPeriod_;
+    _totalEpochsCount = totalPeriod_;
     _period = periodLength_;
   }
 
@@ -108,7 +108,9 @@ contract Campaign is ICampaign, Ownable, ERC721 {
       _settle();
     }
 
-    uint256 reward = properties[tokenId].pendingReward + sharedReward / successTokensCount;
+    uint256 reward = properties[tokenId].pendingReward == 0
+      ? 0
+      : properties[tokenId].pendingReward + sharedReward / successTokensCount;
 
     IERC20(_targetToken).safeTransfer(msg.sender, reward);
 
@@ -134,16 +136,17 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev someone will call the function to settle the campaign
    */
   function _settle() private onlyEnded {
+    successTokensCount = _idx;
     for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
-      successTokensCount = _idx;
-      for (uint256 j = 0; j < _totalPeriod; j++) {
-        if (records[j][tokenId].contentUri == bytes32(0)) {
+      for (uint256 j = 0; j < _totalEpochsCount; j++) {
+        bytes32 content = records[j][tokenId].contentUri;
+        if (content == bytes32(0)) {
           uint256 penalty = properties[tokenId].pendingReward;
-          hostReward = (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
-          protocolFee = (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
+          hostReward += (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
+          protocolFee += (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
           sharedReward += penalty - hostReward - protocolFee;
           properties[tokenId].pendingReward = 0;
-          successTokensCount -= 1;
+          successTokensCount = successTokensCount - 1;
           emit EvFailure(ownerOf(tokenId));
         }
       }
@@ -168,6 +171,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
       currentEpoch += n;
       _lastEpochEndTime += _period * n;
     }
+
+    require(currentEpoch < _totalEpochsCount, 'Campaign: checkEpoch too late');
   }
 
   /**
@@ -221,7 +226,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   modifier onlyEnded() {
-    require(block.timestamp > _startTime + _totalPeriod * _period, 'Campaign: not ended');
+    require(block.timestamp > _startTime + _totalEpochsCount * _period, 'Campaign: not ended');
     _;
   }
 

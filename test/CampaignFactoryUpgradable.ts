@@ -8,6 +8,10 @@ describe('CampaignFactoryUpgradable', () => {
   let campaignFactory: Contract;
   let testErc20: Contract;
   let deployer: string;
+  const requiredAmount = 10n * 10n ** 18n;
+
+  const PROTOCOL_FEE = 10n ** 5n;
+  const HOST_REWARD = 2n * 10n ** 5n;
 
   before(async () => {
     campaignFactory = await getContract('CampaignFactoryUpgradable');
@@ -17,8 +21,6 @@ describe('CampaignFactoryUpgradable', () => {
 
   it('Factory', async () => {
     const testErc20 = await getContract('TestERC20');
-
-    const requiredAmount = 10n * 10n * 18n;
 
     await campaignFactory.modifyWhiteUser(deployer, true);
 
@@ -38,15 +40,13 @@ describe('CampaignFactoryUpgradable', () => {
   it('Campaign', async () => {
     const users = await ethers.getSigners();
 
-    const requiredAmount = 10n * 10n * 18n;
-
     const tx: ContractTransaction = await campaignFactory.createCampaign(
       testErc20.address,
       requiredAmount,
       'Test',
       'T',
       (await getCurrentTime()) + 86400,
-      2,
+      3,
       86400,
     );
 
@@ -99,16 +99,22 @@ describe('CampaignFactoryUpgradable', () => {
 
     await TimeGo(86400);
 
-    for (const user of users) {
+    // first one forget to checkIn
+    for (const user of users.slice(1)) {
       await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'), holderInfo[user.address]);
     }
     expect(await campaign.currentEpoch()).to.be.equal(2);
 
     await TimeGo(86400);
 
-    for (const user of users) {
+    for (const user of users.slice(1)) {
       await campaign.connect(user).claim(holderInfo[user.address]);
-      expect(await testErc20.balanceOf(user.address)).to.be.equal(requiredAmount);
+      expect(await testErc20.balanceOf(user.address)).to.be.equal(
+        requiredAmount + (((requiredAmount * (20n - 19n)) / 19n) * (10n ** 6n - PROTOCOL_FEE - HOST_REWARD)) / 10n ** 6n,
+      );
     }
+
+    await campaign.connect(users[0]).claim(holderInfo[users[0].address]);
+    expect(await testErc20.balanceOf(users[0].address)).to.be.equal(0);
   });
 });
