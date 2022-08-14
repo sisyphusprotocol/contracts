@@ -15,7 +15,7 @@ interface ICampaignFactory {
     uint256 periodLength
   ) external;
 
-  event EvCampaignCreated(address indexed promoter, address indexed campaignAddress);
+  event EvCampaignCreated(address indexed host, address indexed campaignAddress);
   event EvWhiteUserSet(address indexed user, bool status);
   event EvWhiteTokenSet(IERC20 indexed token, uint256 maxAmount);
 }
