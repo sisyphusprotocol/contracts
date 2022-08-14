@@ -27,7 +27,7 @@ interface ICampaign {
 
   event EvClaimReward(address, uint256);
   // who fail
-  event EvFailure(address);
+  event EvFailure(uint256);
 
   event EvWithDraw(address host, uint256, uint256);
 }

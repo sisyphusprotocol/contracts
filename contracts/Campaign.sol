@@ -155,7 +155,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
           sharedReward += penalty - hostReward - protocolFee;
           properties[tokenId].pendingReward = 0;
           successTokensCount = successTokensCount - 1;
-          emit EvFailure(ownerOf(tokenId));
+          emit EvFailure(tokenId);
         }
       }
     }
