@@ -166,7 +166,13 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev user check in
    * @param contentUri bytes32 of ipfs uri or other decentralize storage
    */
-  function checkIn(bytes32 contentUri, uint256 tokenId) external override onlyTokenHolder(tokenId) onlyAdmitted(tokenId) {
+  function checkIn(bytes32 contentUri, uint256 tokenId)
+    external
+    override
+    onlyTokenHolder(tokenId)
+    onlyStarted
+    onlyAdmitted(tokenId)
+  {
     _checkEpoch();
     records[currentEpoch][tokenId] = Record(contentUri);
 
@@ -240,6 +246,11 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   modifier onlyNotStarted() {
     require(block.timestamp < startTime, 'Campaign: already started');
+    _;
+  }
+
+  modifier onlyStarted() {
+    require(block.timestamp >= startTime, 'Campaign: already started');
     _;
   }
 
