@@ -19,17 +19,17 @@ import { Consts } from './Consts.sol';
 contract Campaign is ICampaign, Ownable, ERC721 {
   using SafeERC20 for IERC20;
 
-  IERC20 private immutable _targetToken;
-  uint256 private immutable _requiredAmount;
-  Consts.CampaignStatus private _status;
+  IERC20 public immutable targetToken;
+  uint256 public immutable requiredAmount;
+  Consts.CampaignStatus public status;
 
-  uint256 private _lastEpochEndTime;
+  uint256 public lastEpochEndTime;
   uint256 public currentEpoch;
-  uint256 private _startTime;
-  uint256 private _totalEpochsCount;
-  uint256 private _period;
+  uint256 public startTime;
+  uint256 public totalEpochsCount;
+  uint256 public period;
 
-  uint256 private _idx;
+  uint256 public _idx;
 
   uint256 public sharedReward;
   uint256 public hostReward;
@@ -61,14 +61,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     bytes32 contentUri;
   }
 
-  function tokenAddress() public view override returns (address) {
-    return address(_targetToken);
-  }
-
-  function tokenAmount() public view override returns (uint256) {
-    return _requiredAmount;
-  }
-
   constructor(
     IERC20 token_,
     uint256 amount_,
@@ -80,12 +72,12 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   ) ERC721(name_, symbol_) {
     require(address(token_) != address(0), 'Campaign: invalid token');
     require(amount_ != 0, 'Campaign: invalid amount');
-    _targetToken = token_;
-    _requiredAmount = amount_;
-    _startTime = startTime_;
-    _lastEpochEndTime = startTime_;
-    _totalEpochsCount = totalPeriod_;
-    _period = periodLength_;
+    targetToken = token_;
+    requiredAmount = amount_;
+    startTime = startTime_;
+    lastEpochEndTime = startTime_;
+    totalEpochsCount = totalPeriod_;
+    period = periodLength_;
   }
 
   //
@@ -95,7 +87,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   function signUp() external override onlyNotStarted onlyEOA {
     require(balanceOf(msg.sender) == 0, 'Campaign: already signed');
 
-    IERC20(_targetToken).safeTransferFrom(msg.sender, address(this), _requiredAmount);
+    IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
 
     uint256 tokenId = _idx;
     _idx += 1;
@@ -103,7 +95,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     _safeMint(msg.sender, tokenId);
 
     properties[tokenId].tokenStatus = TokenStatus.SIGNED;
-    properties[tokenId].pendingReward = _requiredAmount;
+    properties[tokenId].pendingReward = requiredAmount;
 
     emit EvSignUp(tokenId);
   }
@@ -112,7 +104,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev user claim reward after campaign settled
    */
   function claim(uint256 tokenId) external override onlyTokenHolder(tokenId) {
-    if (_status != Consts.CampaignStatus.SETTLED) {
+    if (status != Consts.CampaignStatus.SETTLED) {
       _settle();
     }
 
@@ -120,7 +112,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
       ? 0
       : properties[tokenId].pendingReward + sharedReward / successTokensCount;
 
-    IERC20(_targetToken).safeTransfer(msg.sender, reward);
+    IERC20(targetToken).safeTransfer(msg.sender, reward);
 
     properties[tokenId].pendingReward = 0;
 
@@ -134,9 +126,9 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     uint256 reward = hostReward;
     hostReward = 0;
 
-    IERC20(_targetToken).safeTransfer(msg.sender, reward);
+    IERC20(targetToken).safeTransfer(msg.sender, reward);
 
-    IERC20(_targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, protocolFee);
+    IERC20(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, protocolFee);
 
     emit EvWithDraw(msg.sender, reward, protocolFee);
   }
@@ -154,7 +146,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   function _settle() private onlyEnded {
     successTokensCount = _idx;
     for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
-      for (uint256 j = 0; j < _totalEpochsCount; j++) {
+      for (uint256 j = 0; j < totalEpochsCount; j++) {
         bytes32 content = records[j][tokenId].contentUri;
         if (content == bytes32(0)) {
           uint256 penalty = properties[tokenId].pendingReward;
@@ -167,7 +159,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
         }
       }
     }
-    _status = Consts.CampaignStatus.SETTLED;
+    status = Consts.CampaignStatus.SETTLED;
   }
 
   /**
@@ -182,13 +174,13 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   function _checkEpoch() private {
-    if (block.timestamp - _lastEpochEndTime > _period) {
-      uint256 n = (block.timestamp - _lastEpochEndTime) / _period;
+    if (block.timestamp - lastEpochEndTime > period) {
+      uint256 n = (block.timestamp - lastEpochEndTime) / period;
       currentEpoch += n;
-      _lastEpochEndTime += _period * n;
+      lastEpochEndTime += period * n;
     }
 
-    require(currentEpoch < _totalEpochsCount, 'Campaign: checkEpoch too late');
+    require(currentEpoch < totalEpochsCount, 'Campaign: checkEpoch too late');
   }
 
   /**
@@ -201,7 +193,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
       TokenProperty memory property = properties[tokenId];
 
-      require(property.pendingReward == _requiredAmount, 'Campaign: stake not match');
+      require(property.pendingReward == requiredAmount, 'Campaign: stake not match');
       require(property.tokenStatus == TokenStatus.SIGNED, 'Campaign: not signed up');
 
       properties[tokenId].tokenStatus = TokenStatus.ADMITTED;
@@ -237,17 +229,17 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   modifier onlySettled() {
-    require(_status == Consts.CampaignStatus.SETTLED, 'Campaign: not settled');
+    require(status == Consts.CampaignStatus.SETTLED, 'Campaign: not settled');
     _;
   }
 
   modifier onlyEnded() {
-    require(block.timestamp > _startTime + _totalEpochsCount * _period, 'Campaign: not ended');
+    require(block.timestamp > startTime + totalEpochsCount * period, 'Campaign: not ended');
     _;
   }
 
   modifier onlyNotStarted() {
-    require(block.timestamp < _startTime, 'Campaign: already started');
+    require(block.timestamp < startTime, 'Campaign: already started');
     _;
   }
 
