@@ -23,6 +23,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 public immutable requiredAmount;
   Consts.CampaignStatus public status;
 
+  bytes32 public campaignUri;
+
   uint256 public lastEpochEndTime;
   uint256 public currentEpoch;
   uint256 public startTime;
@@ -68,7 +70,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     string memory symbol_,
     uint256 startTime_,
     uint256 totalPeriod_,
-    uint256 periodLength_
+    uint256 periodLength_,
+    bytes32 campaignUri_
   ) ERC721(name_, symbol_) {
     require(address(token_) != address(0), 'Campaign: invalid token');
     require(amount_ != 0, 'Campaign: invalid amount');
@@ -78,6 +81,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     lastEpochEndTime = startTime_;
     totalEpochsCount = totalPeriod_;
     period = periodLength_;
+    campaignUri = campaignUri_;
   }
 
   //

@@ -34,6 +34,7 @@ describe('CampaignFactoryUpgradable', () => {
       (await getCurrentTime()) + 86400 / 2,
       2,
       86400,
+      ethers.utils.formatBytes32String('ipfs://Qmxxxxx'),
     );
   });
 
@@ -48,6 +49,7 @@ describe('CampaignFactoryUpgradable', () => {
       (await getCurrentTime()) + 86400,
       3,
       86400,
+      ethers.utils.formatBytes32String('ipfs://Qmxxxxx'),
     );
 
     const receipt: ContractReceipt = await tx.wait();

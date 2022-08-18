@@ -12,7 +12,8 @@ interface ICampaignFactory {
     string memory symbol,
     uint256 startTime,
     uint256 totalPeriod,
-    uint256 periodLength
+    uint256 periodLength,
+    bytes32 campaignUri
   ) external;
 
   event EvCampaignCreated(address indexed host, address indexed campaignAddress);

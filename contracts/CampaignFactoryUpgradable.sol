@@ -42,10 +42,11 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     string memory symbol,
     uint256 startTime,
     uint256 totalPeriod,
-    uint256 periodLength
+    uint256 periodLength,
+    bytes32 campaignUri
   ) public override onlyWhiteUser onlyWhiteToken(token) {
     require(amount <= whiteTokens[token], 'CampaignF: amount exceed cap');
-    Campaign cam = new Campaign(token, amount, name, symbol, startTime, totalPeriod, periodLength);
+    Campaign cam = new Campaign(token, amount, name, symbol, startTime, totalPeriod, periodLength, campaignUri);
 
     cam.transferOwnership(msg.sender);
 
