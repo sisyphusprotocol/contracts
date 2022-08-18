@@ -23,13 +23,13 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 public immutable requiredAmount;
   Consts.CampaignStatus public status;
 
-  bytes32 public campaignUri;
+  bytes32 public immutable campaignUri;
+  uint256 public immutable startTime;
+  uint256 public immutable totalEpochsCount;
+  uint256 public immutable period;
 
   uint256 public lastEpochEndTime;
   uint256 public currentEpoch;
-  uint256 public startTime;
-  uint256 public totalEpochsCount;
-  uint256 public period;
 
   uint256 public _idx;
 
