@@ -165,8 +165,14 @@ contract Campaign is ICampaign, Ownable, ERC721 {
           properties[tokenId].pendingReward = 0;
           successTokensCount = successTokensCount - 1;
           emit EvFailure(tokenId);
+          break;
         }
       }
+    }
+    // If nobody success, sharedReward come to protocol
+    if (successTokensCount == 0) {
+      protocolFee += sharedReward;
+      sharedReward = 0;
     }
     status = Consts.CampaignStatus.SETTLED;
   }

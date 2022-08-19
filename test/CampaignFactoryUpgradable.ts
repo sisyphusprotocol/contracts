@@ -20,13 +20,14 @@ describe('CampaignFactoryUpgradable', () => {
   });
 
   it('Factory', async () => {
+    const [dev] = await ethers.getSigners();
     const testErc20 = await getContract('TestERC20');
 
     await campaignFactory.modifyWhiteUser(deployer, true);
 
     await campaignFactory.modifyWhiteToken(testErc20.address, ethers.utils.parseEther('100'));
 
-    await campaignFactory.createCampaign(
+    const tx = await campaignFactory.createCampaign(
       testErc20.address,
       requiredAmount,
       'Test',
@@ -36,10 +37,38 @@ describe('CampaignFactoryUpgradable', () => {
       86400,
       ethers.utils.formatBytes32String('ipfs://Qmxxxxx'),
     );
+
+    const receipt: ContractReceipt = await tx.wait();
+
+    const c = receipt.events?.filter((x) => {
+      return x.event === 'EvCampaignCreated';
+    });
+
+    const campaign = await ethers.getContractAt('Campaign', c![0].args!.campaignAddress);
+    await testErc20.mint(dev.address, requiredAmount);
+    await testErc20.connect(dev).approve(campaign.address, ethers.constants.MaxUint256);
+
+    await campaign.signUp();
+    await campaign.admit([0]);
+
+    await TimeGo(86400);
+    await TimeGo(86400);
+    await TimeGo(86400);
+    await campaign.claim(0);
+    await expect(campaign.withdraw())
+      .to.be.emit(testErc20, 'Transfer')
+      .withArgs(campaign.address, dev.address, (requiredAmount * 2n) / 10n);
+
+    expect(await testErc20.balanceOf(dev.address)).to.be.equal((requiredAmount * 2n) / 10n);
   });
 
   it('Campaign', async () => {
     const users = await ethers.getSigners();
+
+    await testErc20.transfer(
+      ethers.utils.computeAddress(ethers.utils.randomBytes(32)),
+      await testErc20.balanceOf(users[0].address),
+    );
 
     const tx: ContractTransaction = await campaignFactory.createCampaign(
       testErc20.address,
@@ -124,7 +153,7 @@ describe('CampaignFactoryUpgradable', () => {
     expect(await testErc20.balanceOf(users[0].address)).to.be.equal((requiredAmount * HOST_REWARD) / 10n ** 6n);
 
     expect(await testErc20.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')).to.be.equal(
-      (requiredAmount * PROTOCOL_FEE) / 10n ** 6n,
+      (requiredAmount * PROTOCOL_FEE) / 10n ** 6n + (requiredAmount * 8n) / 10n,
     );
 
     await campaign.setCampaignUri(ethers.utils.formatBytes32String('ipfs://Qmxxxxy'));
