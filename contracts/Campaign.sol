@@ -23,7 +23,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 public immutable requiredAmount;
   Consts.CampaignStatus public status;
 
-  bytes32 public immutable campaignUri;
+  bytes32 public campaignUri;
   uint256 public immutable startTime;
   uint256 public immutable totalEpochsCount;
   uint256 public immutable period;
@@ -82,6 +82,11 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     totalEpochsCount = totalPeriod_;
     period = periodLength_;
     campaignUri = campaignUri_;
+  }
+
+  function setCampaignUri(bytes32 newUri) external override onlyOwner {
+    campaignUri = newUri;
+    emit EvCampaignUriSet(campaignUri);
   }
 
   //

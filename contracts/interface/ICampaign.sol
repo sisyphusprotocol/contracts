@@ -2,6 +2,9 @@
 pragma solidity 0.8.15;
 
 interface ICampaign {
+  // owner update content uri
+  function setCampaignUri(bytes32 newUri) external;
+
   // user sign up the campaign
   function signUp() external;
 
@@ -16,6 +19,8 @@ interface ICampaign {
 
   // user claim reward after campaign ended
   function claim(uint256 tokenId) external;
+
+  event EvCampaignUriSet(bytes32 newUri);
 
   event EvSignUp(uint256 tokenId);
 

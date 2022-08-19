@@ -126,5 +126,9 @@ describe('CampaignFactoryUpgradable', () => {
     expect(await testErc20.balanceOf('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')).to.be.equal(
       (requiredAmount * PROTOCOL_FEE) / 10n ** 6n,
     );
+
+    await campaign.setCampaignUri(ethers.utils.formatBytes32String('ipfs://Qmxxxxy'));
+
+    expect(await campaign.campaignUri()).to.be.equal(ethers.utils.formatBytes32String('ipfs://Qmxxxxy'));
   });
 });
