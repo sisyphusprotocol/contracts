@@ -30,9 +30,9 @@ interface ICampaign {
 
   event EvModifyRegistry(uint256[] tokenList, bool[] status);
 
-  event EvClaimReward(address, uint256);
+  event EvClaimReward(uint256 tokenId, uint256 amount);
   // who fail
-  event EvFailure(uint256);
+  event EvFailure(uint256 tokenId);
 
-  event EvWithDraw(address host, uint256, uint256);
+  event EvWithDraw(address host, uint256 hostReward, uint256 protocolFee);
 }

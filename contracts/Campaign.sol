@@ -125,7 +125,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
     properties[tokenId].pendingReward = 0;
 
-    emit EvClaimReward(msg.sender, reward);
+    emit EvClaimReward(tokenId, reward);
   }
 
   /**
