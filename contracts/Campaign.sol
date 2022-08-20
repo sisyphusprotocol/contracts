@@ -168,6 +168,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
           break;
         }
       }
+      emit EvSuccess(tokenId);
     }
     // If nobody success, sharedReward come to protocol
     if (successTokensCount == 0) {
@@ -244,6 +245,15 @@ contract Campaign is ICampaign, Ownable, ERC721 {
       }
     }
     emit EvModifyRegistry(lists, targetStatuses);
+  }
+
+  // Do not allow transfer
+  function _beforeTokenTransfer(
+    address from,
+    address,
+    uint256
+  ) internal pure override {
+    require(from == address(0), 'Campaign: Could not transfer');
   }
 
   modifier onlyTokenHolder(uint256 tokenId) {

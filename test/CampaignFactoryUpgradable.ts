@@ -49,6 +49,10 @@ describe('CampaignFactoryUpgradable', () => {
     await testErc20.connect(dev).approve(campaign.address, ethers.constants.MaxUint256);
 
     await campaign.signUp();
+    await expect(
+      campaign.transferFrom(dev.address, ethers.utils.computeAddress(ethers.utils.randomBytes(32)), 0),
+    ).to.be.revertedWith('Campaign: Could not transfer');
+
     await campaign.admit([0]);
 
     await TimeGo(86400);
