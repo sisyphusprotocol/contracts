@@ -175,6 +175,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
       sharedReward = 0;
     }
     status = Consts.CampaignStatus.SETTLED;
+
+    emit EvSettle(msg.sender);
   }
 
   /**

@@ -30,6 +30,9 @@ interface ICampaign {
 
   event EvModifyRegistry(uint256[] tokenList, bool[] status);
 
+  // settle the campaign event
+  event EvSettle(address user);
+
   event EvClaimReward(uint256 tokenId, uint256 amount);
   // who fail
   event EvFailure(uint256 tokenId);
