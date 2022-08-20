@@ -267,7 +267,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   modifier onlyStarted() {
-    require(block.timestamp >= startTime, 'Campaign: already started');
+    require(block.timestamp >= startTime, 'Campaign: not start');
     _;
   }
 
