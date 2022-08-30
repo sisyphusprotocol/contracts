@@ -35,7 +35,7 @@ describe('CampaignFactoryUpgradable', () => {
       (await getCurrentTime()) + 86400 / 2,
       2,
       86400,
-      ethers.utils.formatBytes32String('ipfs://Qmxxxxx'),
+      'ipfs://Qmxxxx',
     );
 
     const receipt: ContractReceipt = await tx.wait();
@@ -82,7 +82,7 @@ describe('CampaignFactoryUpgradable', () => {
       (await getCurrentTime()) + 86400,
       3,
       86400,
-      ethers.utils.formatBytes32String('ipfs://Qmxxxxx'),
+      'ipfs://Qmxxxx',
     );
 
     const receipt: ContractReceipt = await tx.wait();
@@ -119,7 +119,7 @@ describe('CampaignFactoryUpgradable', () => {
     await TimeGo(86400);
 
     for (const user of users) {
-      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'), holderInfo[user.address]);
+      await campaign.connect(user).checkIn('ipfs://Qmxxxx', holderInfo[user.address]);
     }
 
     expect(await campaign.currentEpoch()).to.be.equal(0);
@@ -127,7 +127,7 @@ describe('CampaignFactoryUpgradable', () => {
     await TimeGo(86400);
 
     for (const user of users) {
-      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'), holderInfo[user.address]);
+      await campaign.connect(user).checkIn('ipfs://Qmxxxx', holderInfo[user.address]);
     }
 
     expect(await campaign.currentEpoch()).to.be.equal(1);
@@ -136,7 +136,7 @@ describe('CampaignFactoryUpgradable', () => {
 
     // first one forget to checkIn
     for (const user of users.slice(1)) {
-      await campaign.connect(user).checkIn(ethers.utils.formatBytes32String('ipfs://Qmxxxxx'), holderInfo[user.address]);
+      await campaign.connect(user).checkIn('ipfs://Qmxxxx', holderInfo[user.address]);
     }
     expect(await campaign.currentEpoch()).to.be.equal(2);
 

@@ -3,7 +3,7 @@ pragma solidity 0.8.15;
 
 interface ICampaign {
   // owner update content uri
-  function setCampaignUri(bytes32 newUri) external;
+  function setCampaignUri(string calldata newUri) external;
 
   // user sign up the campaign
   function signUp() external;
@@ -12,7 +12,7 @@ interface ICampaign {
   function admit(uint256[] calldata) external;
 
   // user check at a fixed frequency
-  function checkIn(bytes32, uint256) external;
+  function checkIn(string calldata, uint256) external;
 
   // settle the reward
   function settle() external;
@@ -20,13 +20,13 @@ interface ICampaign {
   // user claim reward after campaign ended
   function claim(uint256 tokenId) external;
 
-  event EvCampaignUriSet(bytes32 newUri);
+  event EvCampaignUriSet(string newUri);
 
   event EvSignUp(uint256 tokenId);
 
   event EvRegisterSuccessfully(uint256 tokenId);
 
-  event EvCheckIn(uint256 epoch, uint256 tokenId, bytes32 contentUri);
+  event EvCheckIn(uint256 epoch, uint256 tokenId, string contentUri);
 
   event EvModifyRegistry(uint256[] tokenList, bool[] status);
 

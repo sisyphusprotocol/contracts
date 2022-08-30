@@ -23,7 +23,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 public immutable requiredAmount;
   Consts.CampaignStatus public status;
 
-  bytes32 public campaignUri;
+  string public campaignUri;
   uint256 public immutable startTime;
   uint256 public immutable totalEpochsCount;
   uint256 public immutable period;
@@ -60,7 +60,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   struct Record {
-    bytes32 contentUri;
+    string contentUri;
   }
 
   constructor(
@@ -71,7 +71,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     uint256 startTime_,
     uint256 totalPeriod_,
     uint256 periodLength_,
-    bytes32 campaignUri_
+    string memory campaignUri_
   ) ERC721(name_, symbol_) {
     require(address(token_) != address(0), 'Campaign: invalid token');
     require(amount_ != 0, 'Campaign: invalid amount');
@@ -84,7 +84,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     campaignUri = campaignUri_;
   }
 
-  function setCampaignUri(bytes32 newUri) external override onlyOwner {
+  function setCampaignUri(string calldata newUri) external override onlyOwner {
     campaignUri = newUri;
     emit EvCampaignUriSet(campaignUri);
   }
@@ -156,8 +156,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     successTokensCount = _idx;
     for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
       for (uint256 j = 0; j < totalEpochsCount; j++) {
-        bytes32 content = records[j][tokenId].contentUri;
-        if (content == bytes32(0)) {
+        string memory content = records[j][tokenId].contentUri;
+        if (bytes(content).length == 0) {
           uint256 penalty = properties[tokenId].pendingReward;
           hostReward += (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
           protocolFee += (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
@@ -182,9 +182,9 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   /**
    * @dev user check in
-   * @param contentUri bytes32 of ipfs uri or other decentralize storage
+   * @param contentUri string of ipfs uri or other decentralize storage
    */
-  function checkIn(bytes32 contentUri, uint256 tokenId)
+  function checkIn(string calldata contentUri, uint256 tokenId)
     external
     override
     onlyTokenHolder(tokenId)

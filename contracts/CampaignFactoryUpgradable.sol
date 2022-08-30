@@ -43,7 +43,7 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     uint256 startTime,
     uint256 totalPeriod,
     uint256 periodLength,
-    bytes32 campaignUri
+    string calldata campaignUri
   ) public override onlyWhiteUser onlyWhiteToken(token) {
     require(amount <= whiteTokens[token], 'CampaignF: amount exceed cap');
     require(block.timestamp + 600 < startTime, 'CampaignF: start too soon');
