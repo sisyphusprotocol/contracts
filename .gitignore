@@ -11,3 +11,4 @@ artifacts
 flatten
 .deps
 yarn-error.log
+change.sh

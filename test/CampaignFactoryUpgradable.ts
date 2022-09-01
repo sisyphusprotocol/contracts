@@ -160,8 +160,8 @@ describe('CampaignFactoryUpgradable', () => {
       (requiredAmount * PROTOCOL_FEE) / 10n ** 6n + (requiredAmount * 8n) / 10n,
     );
 
-    await campaign.setCampaignUri(ethers.utils.formatBytes32String('ipfs://Qmxxxxy'));
+    await campaign.setCampaignUri('ipfs://Qmxxxxy');
 
-    expect(await campaign.campaignUri()).to.be.equal(ethers.utils.formatBytes32String('ipfs://Qmxxxxy'));
+    expect(await campaign.campaignUri()).to.be.equal('ipfs://Qmxxxxy');
   });
 });
