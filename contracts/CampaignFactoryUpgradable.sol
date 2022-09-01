@@ -11,6 +11,7 @@ import './interface/ICampaignFactory.sol';
 import './Consts.sol';
 
 contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, OwnableUpgradeable {
+  bytes32 public constant SALT = keccak256(abi.encode('Sisyphus Protocol'));
   // White list mapping
   mapping(address => bool) public whiteUsers;
 
@@ -47,7 +48,7 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
   ) public override onlyWhiteUser onlyWhiteToken(token) {
     require(amount <= whiteTokens[token], 'CampaignF: amount exceed cap');
     require(block.timestamp + 600 < startTime, 'CampaignF: start too soon');
-    Campaign cam = new Campaign(token, amount, name, symbol, startTime, totalPeriod, periodLength, campaignUri);
+    Campaign cam = new Campaign{ salt: SALT }(token, amount, name, symbol, startTime, totalPeriod, periodLength, campaignUri);
 
     cam.transferOwnership(msg.sender);
 

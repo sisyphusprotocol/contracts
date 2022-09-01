@@ -3,6 +3,7 @@ import { expect } from 'chai';
 
 import { getCurrentTime, TimeGo, getContract } from './utils';
 import { BigNumber, Contract, ContractReceipt, ContractTransaction } from 'ethers';
+import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
 
 describe('CampaignFactoryUpgradable', () => {
   let campaignFactory: Contract;
@@ -27,12 +28,14 @@ describe('CampaignFactoryUpgradable', () => {
 
     await campaignFactory.modifyWhiteToken(testErc20.address, ethers.utils.parseEther('100'));
 
+    const startTime = (await getCurrentTime()) + 86400 / 2;
+
     const tx = await campaignFactory.createCampaign(
       testErc20.address,
       requiredAmount,
       'Test',
       'T',
-      (await getCurrentTime()) + 86400 / 2,
+      startTime,
       2,
       86400,
       'ipfs://Qmxxxx',
@@ -45,6 +48,22 @@ describe('CampaignFactoryUpgradable', () => {
     });
 
     const campaign = await ethers.getContractAt('Campaign', c![0].args!.campaignAddress);
+
+    const CCF = await ethers.getContractFactory('Campaign');
+
+    const ct = defaultAbiCoder.encode(
+      ['address', 'uint256', 'string', 'string', 'uint256', 'uint256', 'uint256', 'string'],
+      [testErc20.address, requiredAmount, 'Test', 'T', startTime, 2, 86400, 'ipfs://Qmxxxx'],
+    );
+
+    const calculatedAddress = ethers.utils.getCreate2Address(
+      campaignFactory.address,
+      ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], ['Sisyphus Protocol'])),
+      keccak256(CCF.bytecode + ct.slice(2)),
+    );
+
+    expect(campaign.address).to.be.equals(calculatedAddress);
+
     await testErc20.mint(dev.address, requiredAmount);
     await testErc20.connect(dev).approve(campaign.address, ethers.constants.MaxUint256);
 
