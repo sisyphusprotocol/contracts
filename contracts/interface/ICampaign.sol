@@ -20,6 +20,10 @@ interface ICampaign {
   // user claim reward after campaign ended
   function claim(uint256 tokenId) external;
 
+  function claimAndWithdraw(uint256 tokenId) external;
+
+  function withdraw() external;
+
   event EvCampaignUriSet(string newUri);
 
   event EvSignUp(uint256 tokenId);

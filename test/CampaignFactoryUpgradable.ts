@@ -77,8 +77,8 @@ describe('CampaignFactoryUpgradable', () => {
     await TimeGo(86400);
     await TimeGo(86400);
     await TimeGo(86400);
-    await campaign.claim(0);
-    await expect(campaign.withdraw())
+    // await campaign.claim(0);
+    await expect(campaign.claimAndWithdraw(0))
       .to.be.emit(testErc20, 'Transfer')
       .withArgs(campaign.address, dev.address, (requiredAmount * 2n) / 10n);
 

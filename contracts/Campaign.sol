@@ -110,104 +110,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   /**
-   * @dev user claim reward after campaign settled
-   */
-  function claim(uint256 tokenId) external override onlyTokenHolder(tokenId) {
-    if (status != Consts.CampaignStatus.SETTLED) {
-      _settle();
-    }
-
-    uint256 reward = properties[tokenId].pendingReward == 0
-      ? 0
-      : properties[tokenId].pendingReward + sharedReward / successTokensCount;
-
-    IERC20(targetToken).safeTransfer(msg.sender, reward);
-
-    properties[tokenId].pendingReward = 0;
-
-    emit EvClaimReward(tokenId, reward);
-  }
-
-  /**
-   * @dev host withdraw host reward
-   */
-  function withdraw() external onlyOwner onlySettled {
-    uint256 reward = hostReward;
-    hostReward = 0;
-
-    IERC20(targetToken).safeTransfer(msg.sender, reward);
-
-    IERC20(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, protocolFee);
-
-    emit EvWithDraw(msg.sender, reward, protocolFee);
-  }
-
-  /**
-   * @dev everyone can call the function to settle reward
-   */
-  function settle() external override {
-    _settle();
-  }
-
-  /**
-   * @dev someone will call the function to settle the campaign
-   */
-  function _settle() private onlyEnded {
-    successTokensCount = _idx;
-    for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
-      for (uint256 j = 0; j < totalEpochsCount; j++) {
-        string memory content = records[j][tokenId].contentUri;
-        if (bytes(content).length == 0) {
-          uint256 penalty = properties[tokenId].pendingReward;
-          hostReward += (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
-          protocolFee += (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
-          sharedReward += penalty - hostReward - protocolFee;
-          properties[tokenId].pendingReward = 0;
-          successTokensCount = successTokensCount - 1;
-          emit EvFailure(tokenId);
-          break;
-        }
-      }
-      emit EvSuccess(tokenId);
-    }
-    // If nobody success, sharedReward come to protocol
-    if (successTokensCount == 0) {
-      protocolFee += sharedReward;
-      sharedReward = 0;
-    }
-    status = Consts.CampaignStatus.SETTLED;
-
-    emit EvSettle(msg.sender);
-  }
-
-  /**
-   * @dev user check in
-   * @param contentUri string of ipfs uri or other decentralize storage
-   */
-  function checkIn(string calldata contentUri, uint256 tokenId)
-    external
-    override
-    onlyTokenHolder(tokenId)
-    onlyStarted
-    onlyAdmitted(tokenId)
-  {
-    _checkEpoch();
-    records[currentEpoch][tokenId] = Record(contentUri);
-
-    emit EvCheckIn(currentEpoch, tokenId, contentUri);
-  }
-
-  function _checkEpoch() private {
-    if (block.timestamp - lastEpochEndTime > period) {
-      uint256 n = (block.timestamp - lastEpochEndTime) / period;
-      currentEpoch += n;
-      lastEpochEndTime += period * n;
-    }
-
-    require(currentEpoch < totalEpochsCount, 'Campaign: checkEpoch too late');
-  }
-
-  /**
    * @dev campaign owner admit several address to participate this campaign
    * @param allowlists allowed tokenId array
    */
@@ -245,6 +147,126 @@ contract Campaign is ICampaign, Ownable, ERC721 {
       }
     }
     emit EvModifyRegistry(lists, targetStatuses);
+  }
+
+  /**
+   * @dev user check in
+   * @param contentUri string of ipfs uri or other decentralize storage
+   */
+  function checkIn(string calldata contentUri, uint256 tokenId)
+    external
+    override
+    onlyTokenHolder(tokenId)
+    onlyStarted
+    onlyAdmitted(tokenId)
+  {
+    _checkEpoch();
+    records[currentEpoch][tokenId] = Record(contentUri);
+
+    emit EvCheckIn(currentEpoch, tokenId, contentUri);
+  }
+
+  /**
+   * @dev everyone can call the function to settle reward
+   */
+  function settle() external override {
+    _settle();
+  }
+
+  /**
+   * @dev user claim reward after campaign settled
+   */
+  function claim(uint256 tokenId) external override onlyTokenHolder(tokenId) {
+    _claim(tokenId);
+  }
+
+  /**
+   * @dev host who participate the campaign claim reward and withdraw host reward
+   */
+  function claimAndWithdraw(uint256 tokenId) external override onlyOwner onlyTokenHolder(tokenId) {
+    _claim(tokenId);
+    _withdraw();
+  }
+
+  /**
+   * @dev host withdraw host reward
+   */
+  function withdraw() external override onlyOwner onlySettled {
+    _withdraw();
+  }
+
+  /**
+   * @dev
+   */
+  function _claim(uint256 tokenId) private {
+    if (status != Consts.CampaignStatus.SETTLED) {
+      _settle();
+    }
+
+    uint256 reward = properties[tokenId].pendingReward == 0
+      ? 0
+      : properties[tokenId].pendingReward + sharedReward / successTokensCount;
+
+    IERC20(targetToken).safeTransfer(msg.sender, reward);
+
+    properties[tokenId].pendingReward = 0;
+
+    emit EvClaimReward(tokenId, reward);
+  }
+
+  /**
+   * @dev host withdraw host reward
+   */
+  function _withdraw() private {
+    uint256 reward = hostReward;
+    hostReward = 0;
+
+    IERC20(targetToken).safeTransfer(msg.sender, reward);
+
+    IERC20(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, protocolFee);
+
+    emit EvWithDraw(msg.sender, reward, protocolFee);
+  }
+
+  /**
+   * @dev someone will call the function to settle the campaign
+   */
+  function _settle() private onlyEnded {
+    successTokensCount = _idx;
+    for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
+      for (uint256 j = 0; j < totalEpochsCount; j++) {
+        string memory content = records[j][tokenId].contentUri;
+        if (bytes(content).length == 0) {
+          uint256 penalty = properties[tokenId].pendingReward;
+          hostReward += (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
+          protocolFee += (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
+          sharedReward += penalty - hostReward - protocolFee;
+          properties[tokenId].pendingReward = 0;
+          successTokensCount = successTokensCount - 1;
+          emit EvFailure(tokenId);
+          break;
+        }
+      }
+      emit EvSuccess(tokenId);
+    }
+    // If nobody success, sharedReward come to protocol
+    if (successTokensCount == 0) {
+      protocolFee += sharedReward;
+      sharedReward = 0;
+    }
+    status = Consts.CampaignStatus.SETTLED;
+
+    emit EvSettle(msg.sender);
+  }
+
+  function _checkEpoch() private {
+    if (block.timestamp - lastEpochEndTime > period) {
+      uint256 n = (block.timestamp - lastEpochEndTime) / period;
+      currentEpoch += n;
+      lastEpochEndTime += period * n;
+    }
+
+    require(currentEpoch < totalEpochsCount, 'Campaign: checkEpoch too late');
   }
 
   // Do not allow transfer
