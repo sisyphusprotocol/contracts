@@ -3,6 +3,8 @@ node_modules
 coverage
 coverage.json
 typechain
+package.json
+pnpm-lock.yaml
 
 #Hardhat files
 cache
