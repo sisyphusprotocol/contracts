@@ -9,6 +9,7 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
 import './interface/ICampaign.sol';
+import '@openzeppelin/contracts/utils/structs/BitMaps.sol';
 
 import 'hardhat/console.sol';
 
@@ -32,6 +33,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 public currentEpoch;
 
   uint256 public _idx;
+  uint256 public _challengeIdx;
 
   uint256 public sharedReward;
   uint256 public hostReward;
@@ -165,6 +167,74 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
     emit EvCheckIn(currentEpoch, tokenId, contentUri);
   }
+
+  //challengeRecordId => tokenId => voter
+  mapping (uint256 => mapping(uint256 => Voter)) public voters;
+
+  //challengeRecordId => ChallengeRecord
+  mapping (uint256 => ChallengeRecord) public challengeRecords;
+
+  //for voted: true = voted; false = not voted;
+  //for choice: true = think cheat; false = think not cheat;
+  struct Voter {
+    bool voted;
+    bool choice;
+  }
+
+  //for result: true = cheat; false = not cheat;
+  //for state: true = over; false = working;
+  struct ChallengeRecord {
+    uint256 challengerId;
+    uint256 cheaterId;
+    uint256 agreeCount;
+    uint256 disagreeCount;
+    uint256 challengeRiseTime;
+    bool result;
+    bool state;
+  }
+
+  function challenge(uint256 challengerId, uint256 cheaterId)
+    external
+    override
+    onlyTokenHolder(challengerId)
+    onlyStarted
+    onlyAdmitted(challengerId)
+    onlyAdmitted(cheaterId)
+  {
+    uint256 challengeRecordId = _challengeIdx;
+    _challengeIdx += 1;
+
+    challengeRecords[challengeRecordId].challengerId = challengerId;
+    challengeRecords[challengeRecordId].cheaterId = cheaterId;
+    challengeRecords[challengeRecordId].challengeRiseTime = block.timestamp;
+    challengeRecords[challengeRecordId].state = true;
+
+    emit EvChallenge(challengerId, cheaterId, challengeRecordId);
+  }
+
+  function vote(uint256 tokenId, uint256 challengeRecordId, bool choice)
+    external
+    override
+    onlyTokenHolder(tokenId)
+    onlyStarted
+    onlyAdmitted(tokenId)
+    onlyChallengeExist(challengeRecordId)
+    onlyChallengeNotEnded(challengeRecordId)
+  {
+    voters[challengeRecordId][tokenId].voted = true;
+    voters[challengeRecordId][tokenId].choice = choice;
+
+    if(choice == true)challengeRecords[challengeRecordId].agreeCount += 1;
+    if(choice == false)challengeRecords[challengeRecordId].disagreeCount += 1;
+
+    emit EvVote(tokenId, challengeRecordId);
+  }
+
+  // function judge()
+
+  // {
+
+  // }
 
   /**
    * @dev everyone can call the function to settle reward
@@ -310,6 +380,16 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   modifier onlyEOA() {
     require(!Address.isContract(msg.sender), 'Campaign: only EOA allowed');
+    _;
+  }
+
+  modifier onlyChallengeExist(uint256 challengeRecordId) {
+    require(challengeRecordId < _challengeIdx, 'Campaign: challenge record not exist');
+    _;
+  }
+
+  modifier onlyChallengeNotEnded(uint256 challengeRecordId) {
+    require(block.timestamp < challengeRecords[challengeRecordId].challengeRiseTime + 7 days);
     _;
   }
 }
