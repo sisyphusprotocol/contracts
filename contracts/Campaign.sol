@@ -497,4 +497,14 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     require(cheatCount >= _idx * cheaterRatio/SCALE, 'Campaign: not enough cheater');
     _;
   }
+
+  modifier onlyChallengeExist(uint256 challengeRecordId) {
+    require(challengeRecordId < _challengeIdx, 'Campaign: challenge record not exist');
+    _;
+  }
+
+  modifier onlyChallengeNotEnded(uint256 challengeRecordId) {
+    require(block.timestamp < challengeRecords[challengeRecordId].challengeRiseTime + 7 days);
+    _;
+  }
 }
