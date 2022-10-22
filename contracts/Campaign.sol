@@ -93,7 +93,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   /**
    * @dev user stake token and want to participate this campaign
    */
-  function signUp() external override onlyNotStarted onlyEOA {
+  function signUp() external override onlyNotStarted {
     require(balanceOf(msg.sender) == 0, 'Campaign: already signed');
 
     IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
@@ -305,11 +305,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   modifier onlyAdmitted(uint256 tokenId) {
     require(properties[tokenId].tokenStatus == TokenStatus.ADMITTED, 'Campaign: not admitted');
-    _;
-  }
-
-  modifier onlyEOA() {
-    require(!Address.isContract(msg.sender), 'Campaign: only EOA allowed');
     _;
   }
 }
