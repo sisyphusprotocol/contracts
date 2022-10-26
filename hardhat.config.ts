@@ -10,6 +10,9 @@ import '@typechain/hardhat';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import '@openzeppelin/hardhat-upgrades';
+import { parseEther } from 'ethers/lib/utils';
+import { BigNumber } from 'ethers';
+import { randomBytes } from 'crypto';
 
 dotenv.config();
 addFlatTask();
@@ -23,6 +26,9 @@ task('accounts', 'Prints the list of accounts', async (taskArgs, hre) => {
     console.log(account.address);
   }
 });
+
+// generate several tem address for test
+const randomAccounts = Array.from({ length: 30 }, (x) => BigNumber.from(randomBytes(32))._hex.toString());
 
 const accounts = process.env.ACCOUNTS ? process.env.ACCOUNTS.split(',') : [];
 
@@ -44,21 +50,38 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
+    // currently fork mumbai for test. Make sure the first address have some $Link
     hardhat: {
-      chainId: 44102,
-    },
-    p12TestNet: {
-      url: 'https://testnet.p12.games/',
-      chainId: 44010,
-      accounts: accounts,
-      gas: 'auto',
-      gasPrice: 'auto',
+      live: true,
+      accounts: [
+        ...[...accounts, ...randomAccounts].map((key) => {
+          return { privateKey: key, balance: parseEther('100').toString() };
+        }),
+      ],
+      chainId: 80001,
+      forking: {
+        enabled: true,
+        url: process.env.MUMBAI_URL || '',
+        // blockNumber: 28826235,
+      },
+      mining: {
+        mempool: {
+          order: 'fifo',
+        },
+      },
+      deploy: ['deploy/hardhat'],
     },
     georli: {
       url: process.env.GEORLI_URL || '',
       live: true,
       accounts: accounts,
       deploy: ['deploy/georli'],
+    },
+    mumbaiTest: {
+      url: process.env.MUMBAI_URL || '',
+      // live: true,
+      accounts: accounts,
+      deploy: ['deploy/mumbaiTest'],
     },
     mumbai: {
       url: process.env.MUMBAI_URL || '',

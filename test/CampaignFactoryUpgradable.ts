@@ -1,14 +1,14 @@
-import { getNamedAccounts, ethers } from 'hardhat';
+import { ethers, deployments } from 'hardhat';
 import { expect } from 'chai';
 
 import { getCurrentTime, TimeGo, getContract } from './utils';
 import { BigNumber, Contract, ContractReceipt, ContractTransaction } from 'ethers';
-import { defaultAbiCoder, keccak256 } from 'ethers/lib/utils';
+import { defaultAbiCoder, keccak256, parseEther } from 'ethers/lib/utils';
 
 describe('CampaignFactoryUpgradable', () => {
   let campaignFactory: Contract;
   let testErc20: Contract;
-  let deployer: string;
+  let LinkToken: Contract;
   const requiredAmount = 10n * 10n ** 18n;
 
   const PROTOCOL_FEE = 10n ** 5n;
@@ -17,18 +17,23 @@ describe('CampaignFactoryUpgradable', () => {
   before(async () => {
     campaignFactory = await getContract('CampaignFactoryUpgradable');
     testErc20 = await getContract('TestERC20');
-    deployer = (await getNamedAccounts()).deployer;
+
+    const link = await deployments.get('Link');
+    LinkToken = await ethers.getContractAt('TestERC20', link.address);
   });
 
   it('Factory', async () => {
     const [dev] = await ethers.getSigners();
     const testErc20 = await getContract('TestERC20');
 
-    await campaignFactory.modifyWhiteUser(deployer, true);
-
-    await campaignFactory.modifyWhiteToken(testErc20.address, ethers.utils.parseEther('100'));
+    await campaignFactory.modifyWhiteToken(testErc20.address, requiredAmount);
 
     const startTime = (await getCurrentTime()) + 86400 / 2;
+
+    // fund it just before use it, as there is fixture in hardhat test
+    await expect(LinkToken.transfer(campaignFactory.address, parseEther('10')))
+      .to.be.emit(LinkToken, 'Transfer')
+      .withArgs(dev.address, campaignFactory.address, parseEther('10'));
 
     const tx = await campaignFactory.createCampaign(
       testErc20.address,
@@ -39,6 +44,7 @@ describe('CampaignFactoryUpgradable', () => {
       2,
       86400,
       'ipfs://Qmxxxx',
+      '0x',
     );
 
     const receipt: ContractReceipt = await tx.wait();
@@ -87,11 +93,17 @@ describe('CampaignFactoryUpgradable', () => {
 
   it('Campaign', async () => {
     const users = await ethers.getSigners();
+    const userCount = users.length;
 
     await testErc20.transfer(
       ethers.utils.computeAddress(ethers.utils.randomBytes(32)),
       await testErc20.balanceOf(users[0].address),
     );
+
+    // fund it just before use it, as there is fixture in hardhat test
+    await expect(LinkToken.transfer(campaignFactory.address, parseEther('10')))
+      .to.be.emit(LinkToken, 'Transfer')
+      .withArgs(users[0].address, campaignFactory.address, parseEther('10'));
 
     const tx: ContractTransaction = await campaignFactory.createCampaign(
       testErc20.address,
@@ -102,6 +114,7 @@ describe('CampaignFactoryUpgradable', () => {
       3,
       86400,
       'ipfs://Qmxxxx',
+      '0x',
     );
 
     const receipt: ContractReceipt = await tx.wait();
@@ -157,6 +170,7 @@ describe('CampaignFactoryUpgradable', () => {
     for (const user of users.slice(1)) {
       await campaign.connect(user).checkIn('ipfs://Qmxxxx', holderInfo[user.address]);
     }
+
     expect(await campaign.currentEpoch()).to.be.equal(2);
 
     await TimeGo(86400);
@@ -164,7 +178,7 @@ describe('CampaignFactoryUpgradable', () => {
     for (const user of users.slice(1)) {
       await campaign.connect(user).claim(holderInfo[user.address]);
       expect(await testErc20.balanceOf(user.address)).to.be.equal(
-        requiredAmount + (requiredAmount * 1n * (10n ** 6n - PROTOCOL_FEE - HOST_REWARD)) / 10n ** 6n / 19n,
+        requiredAmount + (requiredAmount * 1n * (10n ** 6n - PROTOCOL_FEE - HOST_REWARD)) / 10n ** 6n / BigInt(userCount - 1),
       );
     }
 
