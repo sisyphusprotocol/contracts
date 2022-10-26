@@ -13,7 +13,8 @@ interface ICampaignFactory {
     uint256 startTime,
     uint256 totalPeriod,
     uint256 periodLength,
-    string calldata campaignUri
+    string calldata campaignUri,
+    bytes calldata zero
   ) external;
 
   event EvCampaignCreated(address indexed host, address indexed campaignAddress);

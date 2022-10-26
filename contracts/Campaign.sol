@@ -2,22 +2,21 @@
 
 pragma solidity 0.8.15;
 
-import '@openzeppelin/contracts/token/ERC721/IERC721.sol';
 import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/utils/Address.sol';
 import './interface/ICampaign.sol';
-import '@openzeppelin/contracts/utils/structs/BitMaps.sol';
+import '@chainlink/contracts/src/v0.8/AutomationCompatible.sol';
 
 import 'hardhat/console.sol';
+
+import './interface/ICampaign.sol';
 
 import { Consts } from './Consts.sol';
 
 // TODO: merkle tree root to valid user, don't use enumerable
-
-contract Campaign is ICampaign, Ownable, ERC721 {
+contract Campaign is ICampaign, Ownable, ERC721, AutomationCompatible {
   using SafeERC20 for IERC20;
 
   IERC20 public immutable targetToken;
@@ -320,6 +319,32 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    */
   function withdraw() external override onlyOwner onlySettled {
     _withdraw();
+  }
+
+  /**
+   * @dev
+   */
+  function checkUpkeep(
+    bytes calldata /* checkData */
+  )
+    external
+    view
+    override
+    returns (
+      bool upkeepNeeded,
+      bytes memory /* performData */
+    )
+  {
+    upkeepNeeded = block.timestamp - lastEpochEndTime > period;
+  }
+
+  /**
+   *
+   */
+  function performUpkeep(
+    bytes calldata /* performData */
+  ) external override {
+    _checkEpoch();
   }
 
   /**

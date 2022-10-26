@@ -62,7 +62,9 @@
     "vitalik",
     "georli",
     "REKT",
-    "Qmxxxxy"
+    "Qmxxxxy",
+    "chainlink",
+    "concat"
   ],
   "ignorePaths": ["typechain/**", "flatten/**"]
 }

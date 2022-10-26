@@ -5,30 +5,28 @@ import '@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
-import './Campaign.sol';
+import { AutomationRegistryInterface, State, Config } from '@chainlink/contracts/src/v0.8/interfaces/AutomationRegistryInterface1_2.sol';
+import { LinkTokenInterface } from '@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol';
+
+import { Campaign } from './Campaign.sol';
+// import './tests/MinimalCampaign.sol';
+import './CampaignFactoryStorage.sol';
 import 'hardhat/console.sol';
 import './interface/ICampaignFactory.sol';
 import './Consts.sol';
 
-contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, OwnableUpgradeable {
-  bytes32 public constant SALT = keccak256(abi.encode('Sisyphus Protocol'));
-  // White list mapping
-  mapping(address => bool) public whiteUsers;
-
-  // White list token mapping, value is max amount for this token
-  mapping(IERC20 => uint256) public whiteTokens;
-
-  uint256[50] __gap;
-
+contract CampaignFactoryUpgradable is CampaignFactoryStorage, ICampaignFactory, UUPSUpgradeable, OwnableUpgradeable {
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-  function initialize() public initializer {
+  function initialize(
+    LinkTokenInterface link_,
+    address registrar_,
+    AutomationRegistryInterface registry_
+  ) public initializer {
+    i_link = link_;
+    registrar = registrar_;
+    i_registry = registry_;
     __Ownable_init_unchained();
-  }
-
-  function modifyWhiteUser(address user, bool status) public onlyOwner {
-    whiteUsers[user] = status;
-    emit EvWhiteUserSet(user, status);
   }
 
   function modifyWhiteToken(IERC20 token, uint256 amount) public onlyOwner {
@@ -44,19 +42,84 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     uint256 startTime,
     uint256 totalPeriod,
     uint256 periodLength,
-    string calldata campaignUri
-  ) public override onlyWhiteToken(token) {
+    string calldata campaignUri,
+    // please set to 0x0
+    bytes calldata zero
+  ) public override {
     require(amount <= whiteTokens[token], 'CampaignF: amount exceed cap');
     require(block.timestamp + 600 < startTime, 'CampaignF: start too soon');
-    Campaign cam = new Campaign{ salt: SALT }(token, amount, name, symbol, startTime, totalPeriod, periodLength, campaignUri);
+    require(i_link.balanceOf(address(this)) >= uint256(Consts.MIN_LINK_AMOUNT), 'CampaignF: not enough $Link');
+
+    Campaign cam = new Campaign{ salt: Consts.SALT }(
+      token,
+      amount,
+      name,
+      symbol,
+      startTime,
+      totalPeriod,
+      periodLength,
+      campaignUri
+    );
 
     cam.transferOwnership(msg.sender);
+
+    // register chainLink keepUp
+    _registerAndPredictID(
+      'Sisyphus Protocol Campaign',
+      zero,
+      address(cam),
+      Consts.UPKEEP_GAS_LIMIT,
+      Consts.UPKEEP_ADMIN,
+      zero,
+      Consts.MIN_LINK_AMOUNT,
+      0
+    );
 
     emit EvCampaignCreated(msg.sender, address(cam));
   }
 
-  modifier onlyWhiteToken(IERC20 token) {
-    require(whiteTokens[token] > 0, 'CampaignFactory: not whitelist');
-    _;
+  function _registerAndPredictID(
+    string memory name,
+    bytes calldata encryptedEmail,
+    address upkeepContract,
+    uint32 gasLimit,
+    address adminAddress,
+    bytes calldata checkData,
+    uint96 amount,
+    uint8 source
+  ) internal {
+    (State memory state, Config memory _c, address[] memory _k) = i_registry.getState();
+    uint256 oldNonce = state.nonce;
+    bytes memory payload = abi.encode(
+      name,
+      encryptedEmail,
+      upkeepContract,
+      gasLimit,
+      adminAddress,
+      checkData,
+      amount,
+      source,
+      address(this)
+    );
+
+    i_link.transferAndCall(registrar, amount, bytes.concat(Consts.registerSig, payload));
+
+    (state, _c, _k) = i_registry.getState();
+    uint256 newNonce = state.nonce;
+    // console.log(oldNonce, newNonce);
+    if (newNonce == oldNonce + 1) {
+      // uint256 upkeepID =
+      uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), address(i_registry), uint32(oldNonce))));
+      // DEV - Use the upkeepID however you see fit
+    } else {
+      // console.log('Fail');
+      // revert('auto-approve disabled');
+    }
   }
+
+  //  delete white list in development
+  // modifier onlyWhiteUser() {
+  //   // require(whiteUsers[msg.sender], 'CampaignFactory: not whitelist');
+  //   _;
+  // }
 }

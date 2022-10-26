@@ -6,3 +6,4 @@ gasReporterOutput.json
 typechain
 deployments
 pnpm-lock.yaml
+.deps
