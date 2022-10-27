@@ -241,7 +241,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     onlyChallengeEnded(challengeRecordId)
     onlyChallengeExist(challengeRecordId)
     onlyNotJudged(challengeRecordId)
-    onlyEOA
   { 
     uint256 _cheaterId = challengeRecords[challengeRecordId].cheaterId;
     uint256 _count = challengeRecords[challengeRecordId].agreeCount + challengeRecords[challengeRecordId].disagreeCount;
@@ -276,7 +275,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     emit EvJudgement(challengeRecordId);
   }
 
-  function forceEnd() external override onlyEnoughCheater onlyAllJudged{
+  function forceEnd() external onlyEnoughCheater onlyAllJudged{
     _forceSettle();
   }
 
@@ -447,11 +446,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   modifier onlyAdmitted(uint256 tokenId) {
     require(properties[tokenId].tokenStatus == TokenStatus.ADMITTED, 'Campaign: not admitted');
-    _;
-  }
-
-  modifier onlyEOA() {
-    require(!Address.isContract(msg.sender), 'Campaign: only EOA allowed');
     _;
   }
 
