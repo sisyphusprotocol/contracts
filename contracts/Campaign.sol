@@ -494,41 +494,6 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   modifier onlyEnoughCheater() {
-    require(cheatCount >= _idx * cheaterRatio/SCALE, 'Campaign: not enough cheater');
-    _;
-  }
-
-  modifier onlyChallengeExist(uint256 challengeRecordId) {
-    require(challengeRecordId < _challengeIdx, 'ChallengeRecord: not exist');
-    _;
-  }
-
-  modifier onlyChallengeNotEnded(uint256 challengeRecordId) {
-    require(block.timestamp < challengeRecords[challengeRecordId].challengeRiseTime + 7 days, 'Challenge: ended');
-    _;
-  }
-
-  modifier onlyChallengeEnded(uint256 challengeRecordId) {
-    require(block.timestamp >= challengeRecords[challengeRecordId].challengeRiseTime + 7 days,  'Challenge: not ended');
-    _;
-  }
-
-  modifier onlyChallengeAllowed() {
-    require(block.timestamp <= startTime + totalEpochsCount * period + 1 days, 'Challenge: not allowed');
-    _;
-  }
-
-  modifier onlyNotJudged(uint256 challengeRecordId) {
-    require(challengeRecords[challengeRecordId].state == false, 'Challenge: already judged');
-    _;
-  }
-
-  modifier onlyAllJudged() {
-    require(_challengeIdx == challengeJudgedCount, 'Challenge: not all judged');
-    _;
-  }
-
-  modifier onlyEnoughCheater() {
     require(cheatCount >= _idx * 3/10, 'Campaign: not enough cheater');
     _;
   }
