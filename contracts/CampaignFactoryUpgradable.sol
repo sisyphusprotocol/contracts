@@ -45,7 +45,7 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     uint256 totalPeriod,
     uint256 periodLength,
     string calldata campaignUri
-  ) public override onlyWhiteUser onlyWhiteToken(token) {
+  ) public override onlyWhiteToken(token) {
     require(amount <= whiteTokens[token], 'CampaignF: amount exceed cap');
     require(block.timestamp + 600 < startTime, 'CampaignF: start too soon');
     Campaign cam = new Campaign{ salt: SALT }(token, amount, name, symbol, startTime, totalPeriod, periodLength, campaignUri);
@@ -53,11 +53,6 @@ contract CampaignFactoryUpgradable is ICampaignFactory, UUPSUpgradeable, Ownable
     cam.transferOwnership(msg.sender);
 
     emit EvCampaignCreated(msg.sender, address(cam));
-  }
-
-  modifier onlyWhiteUser() {
-    require(whiteUsers[msg.sender], 'CampaignFactory: not whitelist');
-    _;
   }
 
   modifier onlyWhiteToken(IERC20 token) {
