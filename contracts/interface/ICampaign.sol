@@ -28,6 +28,10 @@ interface ICampaign {
 
   function vote(uint256, uint256, bool) external;
 
+  function judgement(uint256) external;
+
+  function forceEnd() external;
+
   event EvCampaignUriSet(string newUri);
 
   event EvSignUp(uint256 tokenId);
@@ -52,4 +56,6 @@ interface ICampaign {
   event EvChallenge(uint256 challengerId, uint256 cheaterId, uint256 challengeRecordId);
 
   event EvVote(uint256 tokenId, uint256 challengeRecordId);
+
+  event EvJudgement(uint256 challengeRecordId);
 }

@@ -34,6 +34,8 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   uint256 public _idx;
   uint256 public _challengeIdx;
+  uint256 public challengeJudgedCount;
+  uint256 public cheatCount;
 
   uint256 public sharedReward;
   uint256 public hostReward;
@@ -183,6 +185,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
   //for result: true = cheat; false = not cheat;
   //for state: true = over; false = working;
+  //for legal: true = over 2/3; false = not enough voter;
   struct ChallengeRecord {
     uint256 challengerId;
     uint256 cheaterId;
@@ -191,6 +194,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     uint256 challengeRiseTime;
     bool result;
     bool state;
+    bool legal;
   }
 
   function challenge(uint256 challengerId, uint256 cheaterId)
@@ -200,6 +204,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     onlyStarted
     onlyAdmitted(challengerId)
     onlyAdmitted(cheaterId)
+    onlyChallengeAllowed
   {
     uint256 challengeRecordId = _challengeIdx;
     _challengeIdx += 1;
@@ -230,11 +235,50 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     emit EvVote(tokenId, challengeRecordId);
   }
 
-  // function judge()
+  function judgement(uint256 challengeRecordId)
+    external
+    override
+    onlyChallengeEnded(challengeRecordId)
+    onlyChallengeExist(challengeRecordId)
+    onlyNotJudged(challengeRecordId)
+    onlyEOA
+  { 
+    uint256 _cheaterId = challengeRecords[challengeRecordId].cheaterId;
+    uint256 _count = challengeRecords[challengeRecordId].agreeCount + challengeRecords[challengeRecordId].disagreeCount;
+    bool _legal = (_count >= _idx * 2/3);
+    require(_legal == true, 'Challenge: not enough voter');
 
-  // {
+    challengeJudgedCount += 1;
 
-  // }
+    bool _result = (challengeRecords[challengeRecordId].agreeCount > challengeRecords[challengeRecordId].disagreeCount);
+    challengeRecords[challengeRecordId].result = _result;
+    challengeRecords[challengeRecordId].state = true;
+
+    if (_result == true) {
+      properties[_cheaterId].tokenStatus = TokenStatus.FAILED;
+
+      uint256 _tranReward = properties[_cheaterId].pendingReward;
+      properties[_cheaterId].pendingReward = 0;
+      properties[challengeRecords[challengeRecordId].challengerId].pendingReward += _tranReward * 3/5;
+      sharedReward += _tranReward * 3/10;
+      IERC20(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, _tranReward/10);
+
+      emit EvFailure(_cheaterId);
+    } else{
+      cheatCount += 1;
+
+      uint256 _tranReward = (properties[_cheaterId].pendingReward) * 2/5;
+      properties[challengeRecords[challengeRecordId].challengerId].pendingReward = (properties[challengeRecords[challengeRecordId].challengerId].pendingReward) * 3/5;
+      sharedReward += _tranReward * 3/4;
+      IERC20(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, _tranReward * 1/4);
+    }
+
+    emit EvJudgement(challengeRecordId);
+  }
+
+  function forceEnd() external override onlyEnoughCheater onlyAllJudged{
+    _forceSettle();
+  }
 
   /**
    * @dev everyone can call the function to settle reward
@@ -246,14 +290,14 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   /**
    * @dev user claim reward after campaign settled
    */
-  function claim(uint256 tokenId) external override onlyTokenHolder(tokenId) {
+  function claim(uint256 tokenId) external override onlyTokenHolder(tokenId) onlyAllJudged {
     _claim(tokenId);
   }
 
   /**
    * @dev host who participate the campaign claim reward and withdraw host reward
    */
-  function claimAndWithdraw(uint256 tokenId) external override onlyOwner onlyTokenHolder(tokenId) {
+  function claimAndWithdraw(uint256 tokenId) external override onlyOwner onlyTokenHolder(tokenId) onlyAllJudged {
     _claim(tokenId);
     _withdraw();
   }
@@ -302,6 +346,34 @@ contract Campaign is ICampaign, Ownable, ERC721 {
    * @dev someone will call the function to settle the campaign
    */
   function _settle() private onlyEnded {
+    successTokensCount = _idx;
+    for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
+      for (uint256 j = 0; j < totalEpochsCount; j++) {
+        string memory content = records[j][tokenId].contentUri;
+        if (bytes(content).length == 0) {
+          uint256 penalty = properties[tokenId].pendingReward;
+          hostReward += (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
+          protocolFee += (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
+          sharedReward += penalty - hostReward - protocolFee;
+          properties[tokenId].pendingReward = 0;
+          successTokensCount = successTokensCount - 1;
+          emit EvFailure(tokenId);
+          break;
+        }
+      }
+      emit EvSuccess(tokenId);
+    }
+    // If nobody success, sharedReward come to protocol
+    if (successTokensCount == 0) {
+      protocolFee += sharedReward;
+      sharedReward = 0;
+    }
+    status = Consts.CampaignStatus.SETTLED;
+
+    emit EvSettle(msg.sender);
+  }
+
+  function _forceSettle() private onlyEnoughCheater {
     successTokensCount = _idx;
     for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
       for (uint256 j = 0; j < totalEpochsCount; j++) {
@@ -384,12 +456,37 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   modifier onlyChallengeExist(uint256 challengeRecordId) {
-    require(challengeRecordId < _challengeIdx, 'Campaign: challenge record not exist');
+    require(challengeRecordId < _challengeIdx, 'ChallengeRecord: not exist');
     _;
   }
 
   modifier onlyChallengeNotEnded(uint256 challengeRecordId) {
-    require(block.timestamp < challengeRecords[challengeRecordId].challengeRiseTime + 7 days);
+    require(block.timestamp < challengeRecords[challengeRecordId].challengeRiseTime + 7 days, 'Challenge: ended');
+    _;
+  }
+
+  modifier onlyChallengeEnded(uint256 challengeRecordId) {
+    require(block.timestamp >= challengeRecords[challengeRecordId].challengeRiseTime + 7 days,  'Challenge: not ended');
+    _;
+  }
+
+  modifier onlyChallengeAllowed() {
+    require(block.timestamp <= startTime + totalEpochsCount * period + 1 days, 'Challenge: not allowed');
+    _;
+  }
+
+  modifier onlyNotJudged(uint256 challengeRecordId) {
+    require(challengeRecords[challengeRecordId].state == false, 'Challenge: already judged');
+    _;
+  }
+
+  modifier onlyAllJudged() {
+    require(_challengeIdx == challengeJudgedCount, 'Challenge: not all judged');
+    _;
+  }
+
+  modifier onlyEnoughCheater() {
+    require(cheatCount >= _idx * 3/10, 'Campaign: not enough cheater');
     _;
   }
 }
