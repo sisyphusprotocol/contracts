@@ -22,6 +22,17 @@ library Consts {
   uint256 public constant PROTOCOL_FEE = 10**5;
   uint256 public constant HOST_REWARD = 2 * 10**5;
 
+  // challenge
+  uint8 constant legalVoterRatio = 66;
+  uint8 constant cheaterRatio = 30;
+  uint8 constant challengerSuccessRatio = 60;
+  uint8 constant successSharedRatio = 30;
+  uint8 constant successProtocolRatio = 10;
+  uint8 constant challengerFailRatio = 40;
+  uint8 constant failSharedRatio = 75;
+  uint8 constant failProtocolRatio = 25;
+  uint8 constant SCALE = 100;
+
   bytes32 public constant SALT = keccak256(abi.encode('Sisyphus Protocol'));
 
   // tmp vitalik.eth

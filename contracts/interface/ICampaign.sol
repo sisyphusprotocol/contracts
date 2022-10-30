@@ -26,7 +26,11 @@ interface ICampaign {
 
   function challenge(uint256, uint256) external;
 
-  function vote(uint256, uint256, bool) external;
+  function vote(
+    uint256,
+    uint256,
+    bool
+  ) external;
 
   function judgement(uint256) external;
 
