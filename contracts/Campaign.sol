@@ -42,6 +42,17 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   uint256 public protocolFee;
   uint256 public successTokensCount;
 
+  uint8 constant legalVoterRatio = 66;
+  uint8 constant cheaterRatio = 30;
+  uint8 constant challengerSuccessRatio = 60;
+  uint8 constant successSharedRatio = 30;
+  uint8 constant successProtocolRatio = 10;
+  uint8 constant challengerFailRatio = 40;
+  uint8 constant failSharedRatio = 75;
+  uint8 constant failProtocolRatio = 25;
+  uint8 constant SCALE = 100;
+
+
   // epoch => tokenId => Record
   mapping(uint256 => mapping(uint256 => Record)) public records;
 
@@ -242,10 +253,11 @@ contract Campaign is ICampaign, Ownable, ERC721 {
     onlyChallengeExist(challengeRecordId)
     onlyNotJudged(challengeRecordId)
   { 
+    uint256 _challengerId = challengeRecords[challengeRecordId].challengerId;
     uint256 _cheaterId = challengeRecords[challengeRecordId].cheaterId;
     uint256 _count = challengeRecords[challengeRecordId].agreeCount + challengeRecords[challengeRecordId].disagreeCount;
-    bool _legal = (_count >= _idx * 2/3);
-    require(_legal == true, 'Challenge: not enough voter');
+    bool _legal = (_count >= _idx * legalVoterRatio/SCALE);
+    require(_legal, 'Challenge: not enough voter');
 
     challengeJudgedCount += 1;
 
@@ -258,18 +270,20 @@ contract Campaign is ICampaign, Ownable, ERC721 {
 
       uint256 _tranReward = properties[_cheaterId].pendingReward;
       properties[_cheaterId].pendingReward = 0;
-      properties[challengeRecords[challengeRecordId].challengerId].pendingReward += _tranReward * 3/5;
-      sharedReward += _tranReward * 3/10;
-      IERC20(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, _tranReward/10);
+      properties[challengeRecords[challengeRecordId].challengerId].pendingReward += _tranReward * challengerSuccessRatio/SCALE;
+      sharedReward += _tranReward * successSharedRatio/SCALE;
+      protocolFee += _tranReward * successProtocolRatio/SCALE;
 
-      emit EvFailure(_cheaterId);
-    } else{
       cheatCount += 1;
+      
+      emit EvFailure(_cheaterId);
+      emit EvCheat(_cheaterId);
 
-      uint256 _tranReward = (properties[_cheaterId].pendingReward) * 2/5;
-      properties[challengeRecords[challengeRecordId].challengerId].pendingReward = (properties[challengeRecords[challengeRecordId].challengerId].pendingReward) * 3/5;
-      sharedReward += _tranReward * 3/4;
-      IERC20(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, _tranReward * 1/4);
+    } else{
+      uint256 _tranReward = (properties[_challengerId].pendingReward) * challengerFailRatio/SCALE;
+      properties[challengeRecords[challengeRecordId].challengerId].pendingReward = (properties[challengeRecords[challengeRecordId].challengerId].pendingReward) * (SCALE - challengerFailRatio)/SCALE;
+      sharedReward += _tranReward * failSharedRatio/SCALE;
+      protocolFee += _tranReward * failProtocolRatio/SCALE;
     }
 
     emit EvJudgement(challengeRecordId);
@@ -480,7 +494,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   modifier onlyEnoughCheater() {
-    require(cheatCount >= _idx * 3/10, 'Campaign: not enough cheater');
+    require(cheatCount >= _idx * cheaterRatio/SCALE, 'Campaign: not enough cheater');
     _;
   }
 }
