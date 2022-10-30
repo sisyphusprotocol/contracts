@@ -20,6 +20,7 @@ specifiers:
   '@typescript-eslint/parser': ^5.16.0
   '@uniswap/lib': 4.0.1-alpha
   chai: ^4.3.4
+  cross-env: ^7.0.3
   cspell: ^5.15.1
   dotenv: ^10.0.0
   eslint: ^7.32.0
@@ -70,6 +71,7 @@ devDependencies:
   '@typescript-eslint/parser': 5.39.0_3rubbgt5ekhqrcgx4uwls3neim
   '@uniswap/lib': 4.0.1-alpha
   chai: 4.3.6
+  cross-env: 7.0.3
   cspell: 5.21.2
   dotenv: 10.0.0
   eslint: 7.32.0
@@ -82,7 +84,7 @@ devDependencies:
   ethereum-waffle: 3.4.4_typescript@4.8.4
   ethers: 5.7.1
   hardhat: 2.9.5_chai@4.3.6
-  hardhat-deploy: 0.11.16
+  hardhat-deploy: 0.11.18
   hardhat-gas-reporter: 1.0.9_hardhat@2.9.5
   husky: 7.0.4
   lodash: 4.17.21
@@ -1610,7 +1612,7 @@ packages:
     engines: {node: '>=6'}
     dependencies:
       buffer: 5.7.1
-      immediate: 3.3.0
+      immediate: 3.2.3
       level-concat-iterator: 2.0.1
       level-supports: 1.0.1
       xtend: 4.0.2
@@ -2757,7 +2759,7 @@ packages:
     hasBin: true
     dependencies:
       caniuse-lite: 1.0.30001418
-      electron-to-chromium: 1.4.275
+      electron-to-chromium: 1.4.276
     dev: true
 
   /bs58/4.0.1:
@@ -3394,6 +3396,14 @@ packages:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
     dev: true
 
+  /cross-env/7.0.3:
+    resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
+    engines: {node: '>=10.14', npm: '>=6', yarn: '>=1'}
+    hasBin: true
+    dependencies:
+      cross-spawn: 7.0.3
+    dev: true
+
   /cross-fetch/2.2.6:
     resolution: {integrity: sha512-9JZz+vXCmfKUZ68zAptS7k4Nu8e2qcibe7WVZYps7sAgk5R8GYTc+T1WR0v1rlP9HxgARmOX1UTIJZFytajpNA==}
     dependencies:
@@ -3851,8 +3861,8 @@ packages:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
     dev: true
 
-  /electron-to-chromium/1.4.275:
-    resolution: {integrity: sha512-aJeQQ+Hl9Jyyzv4chBqYJwmVRY46N5i2BEX5Cuyk/5gFCUZ5F3i7Hnba6snZftWla7Gglwc5pIgcd+E7cW+rPg==}
+  /electron-to-chromium/1.4.276:
+    resolution: {integrity: sha512-EpuHPqu8YhonqLBXHoU6hDJCD98FCe6KDoet3/gY1qsQ6usjJoHqBH2YIVs8FXaAtHwVL8Uqa/fsYao/vq9VWQ==}
     dev: true
 
   /elliptic/6.5.4:
@@ -5741,8 +5751,8 @@ packages:
       hardhat: 2.9.5_chai@4.3.6
     dev: true
 
-  /hardhat-deploy/0.11.16:
-    resolution: {integrity: sha512-dEpbrp3wewfEkDVroOiOteDvKc2BOMQzbjljHJkk65mb8gQZ0c0GsZBoLXROWSRoNhPCFjEDAhKPqBds5pclqQ==}
+  /hardhat-deploy/0.11.18:
+    resolution: {integrity: sha512-Zs5Gr23/HEcYPjQgcSJLlXkR2/WOp24O9Af+7qA540sCDvHjuQ7WhHG/fB2cjPel0Ajf0TzXx1uVViWtbKLqTg==}
     dependencies:
       '@types/qs': 6.9.7
       axios: 0.21.4_debug@4.3.4
@@ -8761,7 +8771,7 @@ packages:
     resolution: {integrity: sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==}
     hasBin: true
     dependencies:
-      glob: 7.2.0
+      glob: 7.2.3
     dev: true
 
   /rimraf/3.0.2:

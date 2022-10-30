@@ -10,7 +10,7 @@
     "flat": "hardhat flat",
     "prettier": "prettier -w .",
     "test": "hardhat test --deploy-fixture",
-    "test:analysis": "REPORT_GAS=true hardhat test --deploy-fixture",
+    "test:analysis": "cross-env REPORT_GAS=true hardhat test --deploy-fixture",
     "coverage": "hardhat coverage",
     "lint": "cspell \"**/*.sol\" \"**/*.ts\" && prettier -w . && eslint \"**/**.ts\" --fix && solhint \"contracts/**/*.sol\""
   },
@@ -31,6 +31,7 @@
     "@typescript-eslint/parser": "^5.16.0",
     "@uniswap/lib": "4.0.1-alpha",
     "chai": "^4.3.4",
+    "cross-env": "^7.0.3",
     "cspell": "^5.15.1",
     "dotenv": "^10.0.0",
     "eslint": "^7.32.0",
