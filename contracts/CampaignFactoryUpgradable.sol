@@ -11,7 +11,7 @@ import { LinkTokenInterface } from '@chainlink/contracts/src/v0.8/interfaces/Lin
 import { Campaign } from './Campaign.sol';
 // import './tests/MinimalCampaign.sol';
 import './CampaignFactoryStorage.sol';
-import 'hardhat/console.sol';
+// import 'hardhat/console.sol';
 import './interface/ICampaignFactory.sol';
 import './Consts.sol';
 
@@ -106,13 +106,11 @@ contract CampaignFactoryUpgradable is CampaignFactoryStorage, ICampaignFactory, 
 
     (state, _c, _k) = i_registry.getState();
     uint256 newNonce = state.nonce;
-    // console.log(oldNonce, newNonce);
     if (newNonce == oldNonce + 1) {
       // uint256 upkeepID =
       uint256(keccak256(abi.encodePacked(blockhash(block.number - 1), address(i_registry), uint32(oldNonce))));
       // DEV - Use the upkeepID however you see fit
     } else {
-      // console.log('Fail');
       // revert('auto-approve disabled');
     }
   }
