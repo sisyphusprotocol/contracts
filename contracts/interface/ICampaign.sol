@@ -58,4 +58,6 @@ interface ICampaign {
   event EvVote(uint256 tokenId, uint256 challengeRecordId);
 
   event EvJudgement(uint256 challengeRecordId);
+
+  event EvCheat(uint256 cheaterId);
 }
