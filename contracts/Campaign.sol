@@ -494,7 +494,7 @@ contract Campaign is ICampaign, Ownable, ERC721 {
   }
 
   modifier onlyEnoughCheater() {
-    require(cheatCount >= _idx * 3/10, 'Campaign: not enough cheater');
+    require(cheatCount >= _idx * cheaterRatio/SCALE, 'Campaign: not enough cheater');
     _;
   }
 }
