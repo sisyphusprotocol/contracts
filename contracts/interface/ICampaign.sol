@@ -1,7 +1,21 @@
 //SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.15;
 
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+
 interface ICampaign {
+  function initialize(
+    address owner,
+    IERC20Upgradeable token_,
+    uint256 amount_,
+    string memory name_,
+    string memory symbol_,
+    uint256 startTime_,
+    uint256 totalPeriod_,
+    uint256 periodLength_,
+    string memory campaignUri_
+  ) external;
+
   // owner update content uri
   function setCampaignUri(string calldata newUri) external;
 

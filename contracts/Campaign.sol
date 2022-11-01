@@ -2,29 +2,29 @@
 
 pragma solidity 0.8.15;
 
-import '@openzeppelin/contracts/token/ERC721/ERC721.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import './interface/ICampaign.sol';
-import '@chainlink/contracts/src/v0.8/AutomationCompatible.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
 import './interface/ICampaign.sol';
+import '@chainlink/contracts/src/v0.8/AutomationCompatible.sol';
 
 import { Consts } from './Consts.sol';
 
 // TODO: merkle tree root to valid user, don't use enumerable
-contract Campaign is ICampaign, Ownable, ERC721, AutomationCompatible {
-  using SafeERC20 for IERC20;
+contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, AutomationCompatible {
+  using SafeERC20Upgradeable for IERC20Upgradeable;
 
-  IERC20 public immutable targetToken;
-  uint256 public immutable requiredAmount;
+  IERC20Upgradeable public targetToken;
+  uint256 public requiredAmount;
   Consts.CampaignStatus public status;
 
   string public campaignUri;
-  uint256 public immutable startTime;
-  uint256 public immutable totalEpochsCount;
-  uint256 public immutable period;
+  uint256 public startTime;
+  uint256 public totalEpochsCount;
+  uint256 public period;
 
   uint256 public lastEpochEndTime;
   uint256 public currentEpoch;
@@ -91,8 +91,9 @@ contract Campaign is ICampaign, Ownable, ERC721, AutomationCompatible {
     string contentUri;
   }
 
-  constructor(
-    IERC20 token_,
+  function initialize(
+    address owner,
+    IERC20Upgradeable token_,
     uint256 amount_,
     string memory name_,
     string memory symbol_,
@@ -100,9 +101,13 @@ contract Campaign is ICampaign, Ownable, ERC721, AutomationCompatible {
     uint256 totalPeriod_,
     uint256 periodLength_,
     string memory campaignUri_
-  ) ERC721(name_, symbol_) {
+  ) public override initializer {
     require(address(token_) != address(0), 'Campaign: invalid token');
     require(amount_ != 0, 'Campaign: invalid amount');
+
+    _transferOwnership(owner);
+    __ERC721_init_unchained(name_, symbol_);
+
     targetToken = token_;
     requiredAmount = amount_;
     startTime = startTime_;
@@ -124,7 +129,7 @@ contract Campaign is ICampaign, Ownable, ERC721, AutomationCompatible {
   function signUp() external override onlyNotStarted {
     require(balanceOf(msg.sender) == 0, 'Campaign: already signed');
 
-    IERC20(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
+    IERC20Upgradeable(targetToken).safeTransferFrom(msg.sender, address(this), requiredAmount);
 
     uint256 tokenId = _idx;
     _idx += 1;
@@ -357,7 +362,7 @@ contract Campaign is ICampaign, Ownable, ERC721, AutomationCompatible {
       ? 0
       : properties[tokenId].pendingReward + sharedReward / successTokensCount;
 
-    IERC20(targetToken).safeTransfer(msg.sender, reward);
+    IERC20Upgradeable(targetToken).safeTransfer(msg.sender, reward);
 
     properties[tokenId].pendingReward = 0;
 
@@ -371,9 +376,9 @@ contract Campaign is ICampaign, Ownable, ERC721, AutomationCompatible {
     uint256 reward = hostReward;
     hostReward = 0;
 
-    IERC20(targetToken).safeTransfer(msg.sender, reward);
+    IERC20Upgradeable(targetToken).safeTransfer(msg.sender, reward);
 
-    IERC20(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, protocolFee);
+    IERC20Upgradeable(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, protocolFee);
 
     emit EvWithDraw(msg.sender, reward, protocolFee);
   }

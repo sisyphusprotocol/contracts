@@ -3,7 +3,8 @@ pragma solidity 0.8.15;
 
 import '@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import '@openzeppelin/contracts/proxy/Clones.sol';
 
 import { AutomationRegistryInterface, State, Config } from '@chainlink/contracts/src/v0.8/interfaces/AutomationRegistryInterface1_2.sol';
 import { LinkTokenInterface } from '@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol';
@@ -19,23 +20,25 @@ contract CampaignFactoryUpgradable is CampaignFactoryStorage, ICampaignFactory, 
   function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
   function initialize(
+    ICampaign campaign_,
     LinkTokenInterface link_,
     address registrar_,
     AutomationRegistryInterface registry_
   ) public initializer {
+    i_campaign = campaign_;
     i_link = link_;
     registrar = registrar_;
     i_registry = registry_;
     __Ownable_init_unchained();
   }
 
-  function modifyWhiteToken(IERC20 token, uint256 amount) public onlyOwner {
+  function modifyWhiteToken(IERC20Upgradeable token, uint256 amount) public onlyOwner {
     whiteTokens[token] = amount;
     emit EvWhiteTokenSet(token, amount);
   }
 
   function createCampaign(
-    IERC20 token,
+    IERC20Upgradeable token,
     uint256 amount,
     string memory name,
     string memory symbol,
@@ -45,29 +48,24 @@ contract CampaignFactoryUpgradable is CampaignFactoryStorage, ICampaignFactory, 
     string calldata campaignUri,
     // please set to 0x0
     bytes calldata zero
-  ) public override {
+  ) public override returns (address campaign) {
     require(amount <= whiteTokens[token], 'CampaignF: amount exceed cap');
     require(block.timestamp + 600 < startTime, 'CampaignF: start too soon');
     require(i_link.balanceOf(address(this)) >= uint256(Consts.MIN_LINK_AMOUNT), 'CampaignF: not enough $Link');
 
-    Campaign cam = new Campaign{ salt: Consts.SALT }(
-      token,
-      amount,
-      name,
-      symbol,
-      startTime,
-      totalPeriod,
-      periodLength,
-      campaignUri
+    bytes32 salt = keccak256(
+      abi.encodePacked(Consts.SALT, msg.sender, token, amount, name, symbol, startTime, totalPeriod, periodLength, campaignUri)
     );
 
-    cam.transferOwnership(msg.sender);
+    campaign = Clones.cloneDeterministic(address(i_campaign), salt);
+
+    ICampaign(campaign).initialize(msg.sender, token, amount, name, symbol, startTime, totalPeriod, periodLength, campaignUri);
 
     // register chainLink keepUp
     _registerAndPredictID(
       'Sisyphus Protocol Campaign',
       zero,
-      address(cam),
+      address(campaign),
       Consts.UPKEEP_GAS_LIMIT,
       Consts.UPKEEP_ADMIN,
       zero,
@@ -75,7 +73,7 @@ contract CampaignFactoryUpgradable is CampaignFactoryStorage, ICampaignFactory, 
       0
     );
 
-    emit EvCampaignCreated(msg.sender, address(cam));
+    emit EvCampaignCreated(msg.sender, address(campaign));
   }
 
   function _registerAndPredictID(

@@ -4,6 +4,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }) 
   const { deploy, get } = deployments;
   const { deployer } = await getNamedAccounts();
 
+  const campaign = await get('Campaign');
   const link = await get('Link');
   const chainLinkRegistry = await get('ChainLinkRegistry');
   const chainLinkRegistrar = await get('ChainLinkRegistrar');
@@ -17,7 +18,7 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }) 
       execute: {
         init: {
           methodName: 'initialize',
-          args: [link.address, chainLinkRegistrar.address, chainLinkRegistry.address],
+          args: [campaign.address, link.address, chainLinkRegistrar.address, chainLinkRegistry.address],
         },
       },
     },

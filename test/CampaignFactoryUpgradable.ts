@@ -3,11 +3,12 @@ import { expect } from 'chai';
 
 import { getCurrentTime, TimeGo, getContract } from './utils';
 import { BigNumber, Contract, ContractReceipt, ContractTransaction } from 'ethers';
-import { defaultAbiCoder, keccak256, parseEther } from 'ethers/lib/utils';
+import { parseEther } from 'ethers/lib/utils';
+import { CampaignFactoryUpgradable, TestERC20 } from '../typechain';
 
 describe('CampaignFactoryUpgradable', () => {
-  let campaignFactory: Contract;
-  let testErc20: Contract;
+  let campaignFactory: CampaignFactoryUpgradable;
+  let testErc20: TestERC20;
   let LinkToken: Contract;
   const requiredAmount = 10n * 10n ** 18n;
 
@@ -15,8 +16,8 @@ describe('CampaignFactoryUpgradable', () => {
   const HOST_REWARD = 2n * 10n ** 5n;
 
   before(async () => {
-    campaignFactory = await getContract('CampaignFactoryUpgradable');
-    testErc20 = await getContract('TestERC20');
+    campaignFactory = await getContract<CampaignFactoryUpgradable>('CampaignFactoryUpgradable');
+    testErc20 = await getContract<TestERC20>('TestERC20');
 
     const link = await deployments.get('Link');
     LinkToken = await ethers.getContractAt('TestERC20', link.address);
@@ -35,7 +36,22 @@ describe('CampaignFactoryUpgradable', () => {
       .to.be.emit(LinkToken, 'Transfer')
       .withArgs(dev.address, campaignFactory.address, parseEther('10'));
 
-    const tx = await campaignFactory.createCampaign(
+    const campaign = await ethers.getContractAt(
+      'Campaign',
+      await campaignFactory.callStatic.createCampaign(
+        testErc20.address,
+        requiredAmount,
+        'Test',
+        'T',
+        startTime,
+        2,
+        86400,
+        'ipfs://Qmxxxx',
+        '0x',
+      ),
+    );
+
+    await campaignFactory.createCampaign(
       testErc20.address,
       requiredAmount,
       'Test',
@@ -46,29 +62,6 @@ describe('CampaignFactoryUpgradable', () => {
       'ipfs://Qmxxxx',
       '0x',
     );
-
-    const receipt: ContractReceipt = await tx.wait();
-
-    const c = receipt.events?.filter((x) => {
-      return x.event === 'EvCampaignCreated';
-    });
-
-    const campaign = await ethers.getContractAt('Campaign', c![0].args!.campaignAddress);
-
-    const CCF = await ethers.getContractFactory('Campaign');
-
-    const ct = defaultAbiCoder.encode(
-      ['address', 'uint256', 'string', 'string', 'uint256', 'uint256', 'uint256', 'string'],
-      [testErc20.address, requiredAmount, 'Test', 'T', startTime, 2, 86400, 'ipfs://Qmxxxx'],
-    );
-
-    const calculatedAddress = ethers.utils.getCreate2Address(
-      campaignFactory.address,
-      ethers.utils.keccak256(ethers.utils.defaultAbiCoder.encode(['string'], ['Sisyphus Protocol'])),
-      keccak256(CCF.bytecode + ct.slice(2)),
-    );
-
-    expect(campaign.address).to.be.equals(calculatedAddress);
 
     await testErc20.mint(dev.address, requiredAmount);
     await testErc20.connect(dev).approve(campaign.address, ethers.constants.MaxUint256);
