@@ -12,7 +12,6 @@ import { LinkTokenInterface } from '@chainlink/contracts/src/v0.8/interfaces/Lin
 import { Campaign } from './Campaign.sol';
 // import './tests/MinimalCampaign.sol';
 import './CampaignFactoryStorage.sol';
-// import 'hardhat/console.sol';
 import './interface/ICampaignFactory.sol';
 import './Consts.sol';
 
@@ -32,9 +31,14 @@ contract CampaignFactoryUpgradable is CampaignFactoryStorage, ICampaignFactory, 
     __Ownable_init_unchained();
   }
 
-  function modifyWhiteToken(IERC20Upgradeable token, uint256 amount) public onlyOwner {
+  function modifyWhiteToken(IERC20Upgradeable token, uint256 amount) external onlyOwner {
     whiteTokens[token] = amount;
     emit EvWhiteTokenSet(token, amount);
+  }
+
+  function updateCampaignImplementation(ICampaign newImplementation) external onlyOwner {
+    i_campaign = newImplementation;
+    emit EvCampaignUpdated(newImplementation);
   }
 
   function createCampaign(

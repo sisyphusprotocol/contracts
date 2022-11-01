@@ -1,6 +1,7 @@
 //SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.15;
 
+import { ICampaign } from './ICampaign.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 
 interface ICampaignFactory {
@@ -16,6 +17,7 @@ interface ICampaignFactory {
     bytes calldata zero
   ) external returns (address campaign);
 
+  event EvCampaignUpdated(ICampaign newImplementation);
   event EvCampaignCreated(address indexed host, address indexed campaignAddress);
   event EvWhiteUserSet(address indexed user, bool status);
   event EvWhiteTokenSet(IERC20Upgradeable indexed token, uint256 maxAmount);
