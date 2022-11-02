@@ -7,7 +7,6 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }) 
   await deploy('TestERC20', {
     from: deployer,
     args: ['TestSisyphus', 'TSS', 0],
-
     log: true,
   });
 };

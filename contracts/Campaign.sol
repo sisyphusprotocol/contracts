@@ -91,6 +91,9 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
     string contentUri;
   }
 
+  // implementation cannot be initialize
+  constructor() initializer {}
+
   function initialize(
     address owner,
     IERC20Upgradeable token_,

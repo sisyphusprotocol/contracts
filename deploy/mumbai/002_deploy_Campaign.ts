@@ -4,19 +4,9 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }) 
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy('CampaignFactoryUpgradable', {
+  await deploy('Campaign', {
     from: deployer,
     args: [],
-    proxy: {
-      proxyContract: 'ERC1967Proxy',
-      proxyArgs: ['{implementation}', '{data}'],
-      execute: {
-        init: {
-          methodName: 'initialize',
-          args: [],
-        },
-      },
-    },
     log: true,
   });
 };
