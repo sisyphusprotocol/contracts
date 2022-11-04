@@ -151,7 +151,7 @@ contract CampaignFactoryUpgradable is
       // check ended campaign and try to cancel upKeep
       for (uint256 i = 0; i < OnGoingCampaigns.length; i++) {
         ICampaign campaign = ICampaign(OnGoingCampaigns[i]);
-        if (campaign.status() == Consts.CampaignStatus.ENDED && !keepUpRecords[address(campaign)].cancelled) {
+        if (campaign.status() == Consts.CampaignStatus.SETTLED && !keepUpRecords[address(campaign)].cancelled) {
           upkeepNeeded = true;
           performData = abi.encode(address(this), kind);
         }
