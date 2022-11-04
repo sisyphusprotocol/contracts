@@ -46,6 +46,9 @@ library Consts {
   // upKeep GasLimit
   uint32 public constant UPKEEP_GAS_LIMIT = 5000000;
 
+  // upKeep Cancel Delay
+  uint256 public constant CANCELATION_DELAY = 50;
+
   enum CampaignType {
     IN_VALID,
     DAILY,

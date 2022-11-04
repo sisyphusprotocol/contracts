@@ -22,5 +22,16 @@ contract CampaignFactoryStorage {
   address public registrar;
   AutomationRegistryInterface public i_registry;
 
-  uint256[47] __gap;
+  struct UpKeepInfo {
+    uint256 upKeepId;
+    bool cancelled;
+    uint256 withdrawalBlockNumber;
+  }
+
+  // campaign address => upkeepID
+  mapping(address => UpKeepInfo) public keepUpRecords;
+
+  address[] public OnGoingCampaigns;
+
+  uint256[45] __gap;
 }

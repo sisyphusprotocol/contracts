@@ -2,6 +2,7 @@
 pragma solidity 0.8.15;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
+import { Consts } from '../Consts.sol';
 
 interface ICampaign {
   function initialize(
@@ -15,6 +16,8 @@ interface ICampaign {
     uint256 periodLength_,
     string memory campaignUri_
   ) external;
+
+  function status() external view returns (Consts.CampaignStatus);
 
   // owner update content uri
   function setCampaignUri(string calldata newUri) external;

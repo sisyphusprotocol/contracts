@@ -19,7 +19,7 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
 
   IERC20Upgradeable public targetToken;
   uint256 public requiredAmount;
-  Consts.CampaignStatus public status;
+  Consts.CampaignStatus public override status;
 
   string public campaignUri;
   uint256 public startTime;

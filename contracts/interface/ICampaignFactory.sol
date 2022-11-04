@@ -21,4 +21,7 @@ interface ICampaignFactory {
   event EvCampaignCreated(address indexed host, address indexed campaignAddress);
   event EvWhiteUserSet(address indexed user, bool status);
   event EvWhiteTokenSet(IERC20Upgradeable indexed token, uint256 maxAmount);
+  event CampaignUpKeepRegistered(address campaign, uint256 upkeepID);
+  event CampaignUpKeepCancelled(address campaign);
+  event CampaignUpKeepWithdrawal(address campaign);
 }

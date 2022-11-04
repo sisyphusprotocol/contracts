@@ -64,7 +64,8 @@
     "REKT",
     "Qmxxxxy",
     "chainlink",
-    "concat"
+    "concat",
+    "CANCELATION"
   ],
   "ignorePaths": ["typechain/**", "flatten/**"]
 }
