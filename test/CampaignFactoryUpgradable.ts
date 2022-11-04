@@ -71,6 +71,9 @@ describe('CampaignFactoryUpgradable', () => {
     // time pass then the host fail
     await TimeGo(86400);
     await TimeGo(86400);
+
+    expect((await campaign.checkUpkeep('0x')).upkeepNeeded).to.be.equal(true);
+
     await TimeGo(86400);
     // await campaign.claim(0);
     await expect(campaign.connect(host).claimAndWithdraw(0))

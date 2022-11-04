@@ -5,12 +5,12 @@ import '@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts/proxy/Clones.sol';
+import '@openzeppelin/contracts/utils/Strings.sol';
 
 import { AutomationRegistryInterface, State, Config } from '@chainlink/contracts/src/v0.8/interfaces/AutomationRegistryInterface1_2.sol';
 import { LinkTokenInterface } from '@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol';
 
 import { Campaign } from './Campaign.sol';
-// import './tests/MinimalCampaign.sol';
 import './CampaignFactoryStorage.sol';
 import './interface/ICampaignFactory.sol';
 import './Consts.sol';
@@ -50,11 +50,11 @@ contract CampaignFactoryUpgradable is CampaignFactoryStorage, ICampaignFactory, 
     uint256 totalPeriod,
     uint256 periodLength,
     string calldata campaignUri,
-    // please set to 0x0
+    // please set to 0x
     bytes calldata zero
   ) public override returns (address campaign) {
     require(amount <= whiteTokens[token], 'CampaignF: amount exceed cap');
-    require(block.timestamp + 600 < startTime, 'CampaignF: start too soon');
+    require(block.timestamp < startTime, 'CampaignF: start too soon');
     require(i_link.balanceOf(address(this)) >= uint256(Consts.MIN_LINK_AMOUNT), 'CampaignF: not enough $Link');
 
     bytes32 salt = keccak256(
@@ -67,7 +67,7 @@ contract CampaignFactoryUpgradable is CampaignFactoryStorage, ICampaignFactory, 
 
     // register chainLink keepUp
     _registerAndPredictID(
-      'Sisyphus Protocol Campaign',
+      string.concat('Sisyphus ', (Strings.toHexString(uint160(campaign), 20))),
       zero,
       address(campaign),
       Consts.UPKEEP_GAS_LIMIT,
