@@ -2,38 +2,36 @@ import { ethers, deployments } from 'hardhat';
 import { expect } from 'chai';
 
 import { getCurrentTime, TimeGo, getContract } from './utils';
-import { BigNumber, Contract, ContractReceipt, ContractTransaction } from 'ethers';
+import { BigNumber, ContractReceipt, ContractTransaction } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { Campaign, CampaignFactoryUpgradable, TestERC20 } from '../typechain';
 
-describe('CampaignFactoryUpgradable', () => {
-  let campaignFactory: CampaignFactoryUpgradable;
-  let testErc20: TestERC20;
-  let LinkToken: Contract;
-  const protocolRecipient = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
-  const requiredAmount = 10n * 10n ** 18n;
+const requiredAmount = 10n * 10n ** 18n;
+const protocolRecipient = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
+const PROTOCOL_FEE = 10n ** 5n;
+const HOST_REWARD = 2n * 10n ** 5n;
 
-  const PROTOCOL_FEE = 10n ** 5n;
-  const HOST_REWARD = 2n * 10n ** 5n;
+const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }, options) => {
+  const testErc20 = await getContract<TestERC20>('TestERC20');
+  const link = await deployments.get('Link');
+  const LinkToken = await ethers.getContractAt('TestERC20', link.address);
 
-  before(async () => {
-    campaignFactory = await getContract<CampaignFactoryUpgradable>('CampaignFactoryUpgradable');
-    testErc20 = await getContract<TestERC20>('TestERC20');
+  await deployments.fixture(); // ensure you start from a fresh deployments
+  const campaignFactory = await getContract<CampaignFactoryUpgradable>('CampaignFactoryUpgradable');
 
-    const link = await deployments.get('Link');
-    LinkToken = await ethers.getContractAt('TestERC20', link.address);
-  });
+  // set WhiteToken
+  await campaignFactory.modifyWhiteToken(testErc20.address, requiredAmount).then((tx) => tx.wait());
+  return {
+    testErc20: testErc20,
+    LinkToken: LinkToken,
+    campaignFactory: campaignFactory,
+  };
+});
 
-  beforeEach(async () => {
-    // snapshot TestERC20 for each test unit
-    await deployments.fixture(['TestERC20']);
-  });
-
+describe('CampaignFactoryUpgradable', function () {
   it('Factory', async () => {
+    const { LinkToken, campaignFactory, testErc20 } = await setupTest();
     const [deployer, host] = await ethers.getSigners();
-    const testErc20 = await getContract('TestERC20');
-
-    await campaignFactory.modifyWhiteToken(testErc20.address, requiredAmount);
 
     const startTime = (await getCurrentTime()) + 86400 / 2;
 
@@ -84,12 +82,12 @@ describe('CampaignFactoryUpgradable', () => {
   });
 
   it('Campaign', async () => {
+    const { LinkToken, campaignFactory, testErc20 } = await setupTest();
+
     // deployer
     const [deployer, ...users] = await ethers.getSigners();
     const host = users[0];
     const userCount = users.length;
-
-    await campaignFactory.modifyWhiteToken(testErc20.address, requiredAmount);
 
     await testErc20.mint(
       ethers.utils.computeAddress(ethers.utils.randomBytes(32)),
@@ -195,5 +193,9 @@ describe('CampaignFactoryUpgradable', () => {
     await campaign.connect(host).setCampaignUri('ipfs://Qmxxxxy');
 
     expect(await campaign.campaignUri()).to.be.equal('ipfs://Qmxxxxy');
+  });
+
+  it('Campaign KeepUp', async () => {
+    // const { LinkToken, campaignFactory, testErc20 } = await setupTest();
   });
 });
