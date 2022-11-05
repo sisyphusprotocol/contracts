@@ -65,7 +65,8 @@
     "Qmxxxxy",
     "chainlink",
     "concat",
-    "CANCELATION"
+    "CANCELATION",
+    "sstore"
   ],
   "ignorePaths": ["typechain/**", "flatten/**"]
 }

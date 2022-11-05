@@ -149,7 +149,7 @@ contract CampaignFactoryUpgradable is
         address _t,
         uint32 _e,
         bytes memory _c,
-        uint96 _b,
+        uint96 balance,
         address _l,
         address _a,
         uint64 maxValid,
@@ -165,7 +165,7 @@ contract CampaignFactoryUpgradable is
       }
 
       // check whether it's time to withdraw after cancel
-      if (block.number > maxValid + Consts.CANCELATION_DELAY) {
+      if (block.number > maxValid + Consts.CANCELATION_DELAY && balance != uint96(0)) {
         upkeepNeeded = true;
         performData = abi.encode(address(campaign), uint256(1));
         return (upkeepNeeded, performData);
@@ -225,5 +225,15 @@ contract CampaignFactoryUpgradable is
     OnGoingCampaigns.push(upkeepContract);
 
     emit CampaignUpKeepRegistered(upkeepContract, upkeepID);
+  }
+
+  /**
+   * @dev compatible with hardhat deploy, maybe removed later
+   */
+  function saveOwnerInAdmin() external {
+    address o = owner();
+    assembly {
+      sstore(_ADMIN_SLOT, o)
+    }
   }
 }
