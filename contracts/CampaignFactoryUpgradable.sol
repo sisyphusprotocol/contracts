@@ -139,55 +139,36 @@ contract CampaignFactoryUpgradable is
   }
 
   /**
-   * @dev two kind of check
-   * 0: whether the campaign is ended and cancel the upKeep
-   * 1: whether it is the time to withdraw $link reserved
+   * @dev check Upkeep
    */
-  function checkUpkeep(bytes calldata checkData) external view override returns (bool upkeepNeeded, bytes memory performData) {
-    uint256 kind = abi.decode(checkData, (uint256));
+  function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
+    // travel the OnGoingCampaigns
+    for (uint256 i = 0; i < OnGoingCampaigns.length; i++) {
+      ICampaign campaign = ICampaign(OnGoingCampaigns[i]);
+      (
+        address _t,
+        uint32 _e,
+        bytes memory _c,
+        uint96 _b,
+        address _l,
+        address _a,
+        uint64 maxValid,
+        uint96 _as
+      ) = IKeeperRegistry(address(i_registry)).getUpkeep(keepUpRecords[address(campaign)].upKeepId);
 
-    if (kind == 0) {
-      // check ended campaign and try to cancel upKeep
-      for (uint256 i = 0; i < OnGoingCampaigns.length; i++) {
-        ICampaign campaign = ICampaign(OnGoingCampaigns[i]);
-        (
-          address _t,
-          uint32 _e,
-          bytes memory _c,
-          uint96 _b,
-          address _l,
-          address _a,
-          uint64 maxValid,
-          uint96 _as
-        ) = IKeeperRegistry(address(i_registry)).getUpkeep(keepUpRecords[address(campaign)].upKeepId);
-
-        bool canceled = maxValid != Consts.UINT64_MAX;
-        if (campaign.status() == Consts.CampaignStatus.SETTLED && !canceled) {
-          upkeepNeeded = true;
-          performData = abi.encode(address(campaign), kind);
-        }
+      // check whether it's time to cancel
+      bool canceled = maxValid != Consts.UINT64_MAX;
+      if (campaign.status() == Consts.CampaignStatus.SETTLED && !canceled) {
+        upkeepNeeded = true;
+        performData = abi.encode(address(campaign), uint256(0));
+        return (upkeepNeeded, performData);
       }
-    } else if (kind == 1) {
-      // check whether it's time to cancel upKeep
-      for (uint256 i = 0; i < OnGoingCampaigns.length; i++) {
-        address campaign = OnGoingCampaigns[i];
 
-        (
-          address _t,
-          uint32 _e,
-          bytes memory _c,
-          uint96 _b,
-          address _l,
-          address _a,
-          uint64 maxValid,
-          uint96 _as
-        ) = IKeeperRegistry(address(i_registry)).getUpkeep(keepUpRecords[address(campaign)].upKeepId);
-
-        // check whether it's time to withdraw after cancel
-        if (block.number > maxValid + Consts.CANCELATION_DELAY) {
-          upkeepNeeded = true;
-          performData = abi.encode(address(this), kind);
-        }
+      // check whether it's time to withdraw after cancel
+      if (block.number > maxValid + Consts.CANCELATION_DELAY) {
+        upkeepNeeded = true;
+        performData = abi.encode(address(campaign), uint256(1));
+        return (upkeepNeeded, performData);
       }
     }
   }
