@@ -221,7 +221,7 @@ contract CampaignFactoryUpgradable is
   function _saveUpKeep(address upkeepContract, uint256 upkeepID) private {
     // record up keep mapping
     keepUpRecords[upkeepContract].upKeepId = upkeepID;
-
+    // just push, it doesn't matter too much not to pop.
     OnGoingCampaigns.push(upkeepContract);
 
     emit CampaignUpKeepRegistered(upkeepContract, upkeepID);

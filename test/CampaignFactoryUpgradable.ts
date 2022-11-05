@@ -3,7 +3,7 @@ import { expect } from 'chai';
 
 import { getCurrentTime, TimeGo, getContract } from './utils';
 import { BigNumber, ContractReceipt, ContractTransaction } from 'ethers';
-import { parseEther } from 'ethers/lib/utils';
+import { defaultAbiCoder, parseEther } from 'ethers/lib/utils';
 import { Campaign, CampaignFactoryUpgradable, TestERC20 } from '../typechain';
 
 const requiredAmount = 10n * 10n ** 18n;
@@ -11,7 +11,8 @@ const protocolRecipient = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
 const PROTOCOL_FEE = 10n ** 5n;
 const HOST_REWARD = 2n * 10n ** 5n;
 
-const setupTest = deployments.createFixture(async ({ deployments, getNamedAccounts, ethers }, options) => {
+const setupTest = deployments.createFixture(async ({ deployments, ___, ethers }, __) => {
+  const [deployer] = await ethers.getSigners();
   const testErc20 = await getContract<TestERC20>('TestERC20');
   const link = await deployments.get('Link');
   const LinkToken = await ethers.getContractAt('TestERC20', link.address);
@@ -19,6 +20,10 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
   await deployments.fixture(); // ensure you start from a fresh deployments
   const campaignFactory = await getContract<CampaignFactoryUpgradable>('CampaignFactoryUpgradable');
 
+  // fund it campaignFactory enough $link
+  await expect(LinkToken.connect(deployer).transfer(campaignFactory.address, parseEther('10')))
+    .to.be.emit(LinkToken, 'Transfer')
+    .withArgs(deployer.address, campaignFactory.address, parseEther('10'));
   // set WhiteToken
   await campaignFactory.modifyWhiteToken(testErc20.address, requiredAmount).then((tx) => tx.wait());
   return {
@@ -30,15 +35,11 @@ const setupTest = deployments.createFixture(async ({ deployments, getNamedAccoun
 
 describe('CampaignFactoryUpgradable', function () {
   it('Factory', async () => {
-    const { LinkToken, campaignFactory, testErc20 } = await setupTest();
-    const [deployer, host] = await ethers.getSigners();
+    const { campaignFactory, testErc20 } = await setupTest();
+    // eslint-disable-next-line no-unused-vars
+    const [_deployer, host] = await ethers.getSigners();
 
     const startTime = (await getCurrentTime()) + 86400 / 2;
-
-    // fund it just before use it, as there is fixture in hardhat test
-    await expect(LinkToken.connect(deployer).transfer(campaignFactory.address, parseEther('10')))
-      .to.be.emit(LinkToken, 'Transfer')
-      .withArgs(deployer.address, campaignFactory.address, parseEther('10'));
 
     const campaign = await ethers.getContractAt<Campaign>(
       'Campaign',
@@ -196,6 +197,46 @@ describe('CampaignFactoryUpgradable', function () {
   });
 
   it('Campaign KeepUp', async () => {
-    // const { LinkToken, campaignFactory, testErc20 } = await setupTest();
+    const { campaignFactory, testErc20 } = await setupTest();
+    const [deployer, host] = await ethers.getSigners();
+    const startTime = (await getCurrentTime()) + 86400;
+
+    // create campaign
+    const campaign = await ethers.getContractAt<Campaign>(
+      'Campaign',
+      await campaignFactory
+        .connect(host)
+        .callStatic.createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 3, 60, 'ipfs://Qmxxxx', '0x'),
+    );
+    await campaignFactory
+      .connect(host)
+      .createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 3, 60, 'ipfs://Qmxxxx', '0x');
+
+    // time pass and campaign start
+    await TimeGo(86400);
+    // time pass and should checkEpoch
+    await TimeGo(61);
+    const { upkeepNeeded, performData } = await campaign.checkUpkeep('0x');
+    expect(upkeepNeeded).to.be.equal(true);
+    expect(performData).to.be.equals(defaultAbiCoder.encode(['uint256'], [1]));
+    expect(campaign.performUpkeep(performData)).to.be.emit(campaign, 'EpochUpdated').withArgs(1);
+
+    // should upkeepNeed to false after performUpKeep
+    const { upkeepNeeded: upkeepNeededShouldFalse } = await campaign.checkUpkeep('0x');
+    expect(upkeepNeededShouldFalse).to.be.equal(false);
+
+    // time pass and should checkEpoch again
+    await TimeGo(60);
+    const { upkeepNeeded: upkeepNeeded2, performData: performData2 } = await campaign.checkUpkeep('0x');
+    expect(upkeepNeeded2).to.be.equal(true);
+    expect(performData2).to.be.equals(defaultAbiCoder.encode(['uint256'], [1]));
+    expect(campaign.performUpkeep(performData2)).to.be.emit(campaign, 'EpochUpdated').withArgs(2);
+
+    // time pass and should settle finally
+    await TimeGo(60);
+    const { upkeepNeeded: upkeepNeeded3, performData: performData3 } = await campaign.checkUpkeep('0x');
+    expect(upkeepNeeded3).to.be.equal(true);
+    expect(performData3).to.be.equals(defaultAbiCoder.encode(['uint256'], [0]));
+    expect(campaign.performUpkeep(performData3)).to.be.emit(campaign, 'EvSettle').withArgs(deployer.address);
   });
 });

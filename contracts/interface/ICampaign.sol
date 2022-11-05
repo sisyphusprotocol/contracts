@@ -53,6 +53,9 @@ interface ICampaign {
 
   function forceEnd() external;
 
+  // epoch update event;
+  event EpochUpdated(uint256 currentEpoch);
+
   event EvCampaignUriSet(string newUri);
 
   event EvSignUp(uint256 tokenId);

@@ -332,25 +332,30 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
    */
   function checkUpkeep(
     bytes calldata /* checkData */
-  )
-    external
-    view
-    override
-    returns (
-      bool upkeepNeeded,
-      bytes memory /* performData */
-    )
-  {
-    upkeepNeeded = block.timestamp - lastEpochEndTime > period;
+  ) external view override returns (bool upkeepNeeded, bytes memory performData) {
+    // check whether the campaign end
+    if (block.timestamp > startTime + totalEpochsCount * period) {
+      upkeepNeeded = true;
+      performData = abi.encode(uint256(0));
+      // check whether it's time to update epoch
+    } else if (block.timestamp - lastEpochEndTime > period) {
+      upkeepNeeded = true;
+      performData = abi.encode(uint256(1));
+    }
   }
 
   /**
    *
    */
-  function performUpkeep(
-    bytes calldata /* performData */
-  ) external override {
-    _checkEpoch();
+  function performUpkeep(bytes calldata performData) external override {
+    uint256 kind = abi.decode(performData, (uint256));
+    if (kind == 0) {
+      _settle();
+    } else if (kind == 1) {
+      _checkEpoch();
+    } else {
+      revert('Nothing To DO');
+    }
   }
 
   /**
@@ -451,6 +456,7 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
       currentEpoch += n;
       lastEpochEndTime += period * n;
     }
+    emit EpochUpdated(currentEpoch);
 
     require(currentEpoch < totalEpochsCount, 'Campaign: checkEpoch too late');
   }
