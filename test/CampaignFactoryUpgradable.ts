@@ -215,6 +215,10 @@ describe('CampaignFactoryUpgradable', function () {
       .connect(host)
       .createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 3, 60, 'ipfs://Qmxxxx', '0x');
 
+    // should upkeepNeed to false after before campaign start
+    const { upkeepNeeded: upkeepNeededShouldFalse } = await campaign.checkUpkeep('0x');
+    expect(upkeepNeededShouldFalse).to.be.equal(false);
+
     // time pass and campaign start
     await TimeGo(86400);
     // time pass and should checkEpoch
@@ -225,8 +229,8 @@ describe('CampaignFactoryUpgradable', function () {
     expect(campaign.performUpkeep(performData)).to.be.emit(campaign, 'EpochUpdated').withArgs(1);
 
     // should upkeepNeed to false after performUpKeep
-    const { upkeepNeeded: upkeepNeededShouldFalse } = await campaign.checkUpkeep('0x');
-    expect(upkeepNeededShouldFalse).to.be.equal(false);
+    const { upkeepNeeded: upkeepNeededShouldFalseEither } = await campaign.checkUpkeep('0x');
+    expect(upkeepNeededShouldFalseEither).to.be.equal(false);
 
     // time pass and should checkEpoch again
     await TimeGo(60);
