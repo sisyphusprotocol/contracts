@@ -164,7 +164,7 @@ contract CampaignFactoryUpgradable is
         bool canceled = maxValid != Consts.UINT64_MAX;
         if (campaign.status() == Consts.CampaignStatus.SETTLED && !canceled) {
           upkeepNeeded = true;
-          performData = abi.encode(address(this), kind);
+          performData = abi.encode(address(campaign), kind);
         }
       }
     } else if (kind == 1) {
