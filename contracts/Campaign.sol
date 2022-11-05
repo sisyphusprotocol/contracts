@@ -337,10 +337,12 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
     if (block.timestamp > startTime + totalEpochsCount * period) {
       upkeepNeeded = true;
       performData = abi.encode(uint256(0));
+      return (upkeepNeeded, performData);
       // check whether it's time to update epoch
     } else if (block.timestamp - lastEpochEndTime > period) {
       upkeepNeeded = true;
       performData = abi.encode(uint256(1));
+      return (upkeepNeeded, performData);
     }
   }
 

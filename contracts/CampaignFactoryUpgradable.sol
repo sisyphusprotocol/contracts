@@ -11,8 +11,6 @@ import { AutomationRegistryInterface, State, Config } from '@chainlink/contracts
 import { LinkTokenInterface } from '@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol';
 import '@chainlink/contracts/src/v0.8/AutomationCompatible.sol';
 import './interface/IKeeperRegistry.sol';
-
-import { Campaign } from './Campaign.sol';
 import './CampaignFactoryStorage.sol';
 import './interface/ICampaignFactory.sol';
 import './Consts.sol';

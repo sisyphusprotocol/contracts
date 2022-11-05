@@ -11,27 +11,30 @@ const protocolRecipient = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
 const PROTOCOL_FEE = 10n ** 5n;
 const HOST_REWARD = 2n * 10n ** 5n;
 
-const setupTest = deployments.createFixture(async ({ deployments, ___, ethers }, __) => {
-  const [deployer] = await ethers.getSigners();
-  const testErc20 = await getContract<TestERC20>('TestERC20');
-  const link = await deployments.get('Link');
-  const LinkToken = await ethers.getContractAt('TestERC20', link.address);
+const setupTest = deployments.createFixture(
+  // eslint-disable-next-line no-unused-vars
+  async ({ deployments, getNamedAccounts, ethers }, options) => {
+    const [deployer] = await ethers.getSigners();
+    const testErc20 = await getContract<TestERC20>('TestERC20');
+    const link = await deployments.get('Link');
+    const LinkToken = await ethers.getContractAt('TestERC20', link.address);
 
-  await deployments.fixture(); // ensure you start from a fresh deployments
-  const campaignFactory = await getContract<CampaignFactoryUpgradable>('CampaignFactoryUpgradable');
+    await deployments.fixture(); // ensure you start from a fresh deployments
+    const campaignFactory = await getContract<CampaignFactoryUpgradable>('CampaignFactoryUpgradable');
 
-  // fund it campaignFactory enough $link
-  await expect(LinkToken.connect(deployer).transfer(campaignFactory.address, parseEther('10')))
-    .to.be.emit(LinkToken, 'Transfer')
-    .withArgs(deployer.address, campaignFactory.address, parseEther('10'));
-  // set WhiteToken
-  await campaignFactory.modifyWhiteToken(testErc20.address, requiredAmount).then((tx) => tx.wait());
-  return {
-    testErc20: testErc20,
-    LinkToken: LinkToken,
-    campaignFactory: campaignFactory,
-  };
-});
+    // fund it campaignFactory enough $link
+    await expect(LinkToken.connect(deployer).transfer(campaignFactory.address, parseEther('10')))
+      .to.be.emit(LinkToken, 'Transfer')
+      .withArgs(deployer.address, campaignFactory.address, parseEther('10'));
+    // set WhiteToken
+    await campaignFactory.modifyWhiteToken(testErc20.address, requiredAmount).then((tx) => tx.wait());
+    return {
+      testErc20: testErc20,
+      LinkToken: LinkToken,
+      campaignFactory: campaignFactory,
+    };
+  },
+);
 
 describe('CampaignFactoryUpgradable', function () {
   it('Factory', async () => {
