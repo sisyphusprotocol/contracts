@@ -11,7 +11,6 @@ import { AutomationRegistryInterface, State, Config } from '@chainlink/contracts
 import { LinkTokenInterface } from '@chainlink/contracts/src/v0.8/interfaces/LinkTokenInterface.sol';
 import '@chainlink/contracts/src/v0.8/AutomationCompatible.sol';
 import './interface/IKeeperRegistry.sol';
-import { AutomationRegistryInterface, State, Config } from '@chainlink/contracts/src/v0.8/interfaces/AutomationRegistryInterface1_2.sol';
 
 import { Campaign } from './Campaign.sol';
 import './CampaignFactoryStorage.sol';
@@ -151,7 +150,19 @@ contract CampaignFactoryUpgradable is
       // check ended campaign and try to cancel upKeep
       for (uint256 i = 0; i < OnGoingCampaigns.length; i++) {
         ICampaign campaign = ICampaign(OnGoingCampaigns[i]);
-        if (campaign.status() == Consts.CampaignStatus.SETTLED && !keepUpRecords[address(campaign)].cancelled) {
+        (
+          address _t,
+          uint32 _e,
+          bytes memory _c,
+          uint96 _b,
+          address _l,
+          address _a,
+          uint64 maxValid,
+          uint96 _as
+        ) = IKeeperRegistry(address(i_registry)).getUpkeep(keepUpRecords[address(campaign)].upKeepId);
+
+        bool canceled = maxValid != Consts.UINT64_MAX;
+        if (campaign.status() == Consts.CampaignStatus.SETTLED && !canceled) {
           upkeepNeeded = true;
           performData = abi.encode(address(this), kind);
         }
@@ -160,9 +171,20 @@ contract CampaignFactoryUpgradable is
       // check whether it's time to cancel upKeep
       for (uint256 i = 0; i < OnGoingCampaigns.length; i++) {
         address campaign = OnGoingCampaigns[i];
-        if (
-          keepUpRecords[campaign].withdrawalBlockNumber != 0 && block.number > keepUpRecords[campaign].withdrawalBlockNumber
-        ) {
+
+        (
+          address _t,
+          uint32 _e,
+          bytes memory _c,
+          uint96 _b,
+          address _l,
+          address _a,
+          uint64 maxValid,
+          uint96 _as
+        ) = IKeeperRegistry(address(i_registry)).getUpkeep(keepUpRecords[address(campaign)].upKeepId);
+
+        // check whether it's time to withdraw after cancel
+        if (block.number > maxValid + Consts.CANCELATION_DELAY) {
           upkeepNeeded = true;
           performData = abi.encode(address(this), kind);
         }
@@ -181,7 +203,6 @@ contract CampaignFactoryUpgradable is
     if (kind == 0) {
       // cancel keep up
       AutomationRegistryInterface(i_registry).cancelUpkeep(keepUpRecords[campaign].upKeepId);
-      keepUpRecords[campaign].cancelled = true;
 
       emit CampaignUpKeepCancelled(campaign);
     } else if (kind == 1) {
@@ -191,12 +212,26 @@ contract CampaignFactoryUpgradable is
     }
   }
 
+  /**
+   * @dev use in development
+   */
+
   function cancelUpKeep(address campaign) external onlyOwner {
     AutomationRegistryInterface(i_registry).cancelUpkeep(keepUpRecords[campaign].upKeepId);
   }
 
+  /**
+   * @dev use in development
+   */
   function withdrawUpKeep(address campaign) external onlyOwner {
     IKeeperRegistry(address(i_registry)).withdrawFunds(keepUpRecords[campaign].upKeepId, msg.sender);
+  }
+
+  /**
+   * @dev use in development, manually edit data
+   */
+  function setKeepUpRecords(address campaign, UpKeepInfo calldata upKeepInfo) external onlyOwner {
+    keepUpRecords[campaign] = upKeepInfo;
   }
 
   /**

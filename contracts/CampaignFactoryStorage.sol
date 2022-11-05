@@ -24,8 +24,6 @@ contract CampaignFactoryStorage {
 
   struct UpKeepInfo {
     uint256 upKeepId;
-    bool cancelled;
-    uint256 withdrawalBlockNumber;
   }
 
   // campaign address => upkeepID
