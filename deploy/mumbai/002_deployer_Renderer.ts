@@ -4,12 +4,12 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }) 
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy('Campaign', {
+  await deploy('Renderer', {
     from: deployer,
     args: [],
     log: true,
   });
 };
 
-func.tags = [];
+func.tags = ['Renderer'];
 export default func;

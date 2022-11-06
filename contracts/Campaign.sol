@@ -7,15 +7,19 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts/utils/Base64.sol';
+import '@chainlink/contracts/src/v0.8/AutomationCompatible.sol';
 
 import './interface/ICampaign.sol';
-import '@chainlink/contracts/src/v0.8/AutomationCompatible.sol';
+import './interface/IRenderer.sol';
 
 import { Consts } from './Consts.sol';
 
 // TODO: merkle tree root to valid user, don't use enumerable
 contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, AutomationCompatible {
   using SafeERC20Upgradeable for IERC20Upgradeable;
+
+  IRenderer public immutable render;
 
   IERC20Upgradeable public targetToken;
   uint256 public requiredAmount;
@@ -91,8 +95,11 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
     string contentUri;
   }
 
+  //
   // implementation cannot be initialize
-  constructor() initializer {}
+  constructor(IRenderer render_) initializer {
+    render = render_;
+  }
 
   function initialize(
     address owner,
@@ -358,6 +365,25 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
     } else {
       revert('Nothing To DO');
     }
+  }
+
+  function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    string memory metadata = Base64.encode(
+      bytes(
+        string.concat(
+          '{"name": "',
+          name(),
+          '","description":"',
+          '',
+          '","image":"',
+          'data:image/svg+xml;base64,',
+          Base64.encode(bytes(render.renderTokenById(tokenId))),
+          '"}'
+        )
+      )
+    );
+
+    return string.concat('data:application/json;base64,', metadata);
   }
 
   /**

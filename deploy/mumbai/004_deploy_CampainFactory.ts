@@ -26,5 +26,5 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }) 
   });
 };
 
-func.tags = [];
+func.tags = ['CampaignFactory'];
 export default func;

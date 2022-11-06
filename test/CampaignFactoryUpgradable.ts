@@ -86,10 +86,10 @@ describe('CampaignFactoryUpgradable', function () {
   });
 
   it('Campaign', async () => {
-    const { LinkToken, campaignFactory, testErc20 } = await setupTest();
+    const { campaignFactory, testErc20 } = await setupTest();
 
-    // deployer
-    const [deployer, ...users] = await ethers.getSigners();
+    // eslint-disable-next-line no-unused-vars
+    const [_deployer, ...users] = await ethers.getSigners();
     const host = users[0];
     const userCount = users.length;
 
@@ -97,11 +97,6 @@ describe('CampaignFactoryUpgradable', function () {
       ethers.utils.computeAddress(ethers.utils.randomBytes(32)),
       await testErc20.balanceOf(users[0].address),
     );
-
-    // fund it just before use it, as there is fixture in hardhat test
-    await expect(LinkToken.transfer(campaignFactory.address, parseEther('10')))
-      .to.be.emit(LinkToken, 'Transfer')
-      .withArgs(deployer.address, campaignFactory.address, parseEther('10'));
 
     const startTime = (await getCurrentTime()) + 86400;
 
