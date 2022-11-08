@@ -5,6 +5,46 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import { Consts } from '../Consts.sol';
 
 interface ICampaign {
+  //for voted: true = voted; false = not voted;
+  //for choice: true = think cheat; false = think not cheat;
+  struct Voter {
+    bool voted;
+    bool choice;
+  }
+
+  //for result: true = cheat; false = not cheat;
+  //for state: true = over; false = working;
+  //for legal: true = over 2/3; false = not enough voter;
+  struct ChallengeRecord {
+    uint256 challengerId;
+    uint256 cheaterId;
+    uint256 agreeCount;
+    uint256 disagreeCount;
+    uint256 challengeRiseTime;
+    bool result;
+    bool state;
+    bool legal;
+  }
+
+  struct TokenProperty {
+    TokenStatus tokenStatus;
+    uint256 pendingReward;
+  }
+
+  enum TokenStatus {
+    INVALID,
+    EXIT,
+    SIGNED,
+    ADMITTED,
+    ACHIEVED,
+    FAILED,
+    REKT
+  }
+
+  struct Record {
+    string contentUri;
+  }
+
   function initialize(
     address owner,
     IERC20Upgradeable token_,
@@ -18,6 +58,14 @@ interface ICampaign {
   ) external;
 
   function status() external view returns (Consts.CampaignStatus);
+
+  function totalEpochsCount() external view returns (uint256);
+
+  function period() external view returns (uint256);
+
+  function currentEpoch() external view returns (uint256);
+
+  function getTokenProperties(uint256 tokenId) external view returns (TokenProperty memory);
 
   // owner update content uri
   function setCampaignUri(string calldata newUri) external;

@@ -6,11 +6,18 @@ import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol';
 import '@openzeppelin/contracts/utils/Base64.sol';
 
 import './interface/IRenderer.sol';
+import './interface/ICampaign.sol';
 
 contract Renderer is IRenderer {
   // caller must be Campaign Contract
   function renderTokenById(uint256 id) public view override returns (string memory) {
-    return renderSvg(address(uint160(id)), IERC721Metadata(msg.sender).name(), 'Bravo', '14 days', 100);
+    uint256 dayCount = (ICampaign(msg.sender).period() * ICampaign(msg.sender).totalEpochsCount()) / 86400;
+    string memory period = string(abi.encode(Strings.toString(dayCount), 'Days'));
+    string memory result = ICampaign(msg.sender).getTokenProperties(id).tokenStatus == ICampaign.TokenStatus.FAILED
+      ? 'Bravo'
+      : 'Failed';
+    uint256 process = ((ICampaign(msg.sender).currentEpoch() + 1) * 100) / (ICampaign(msg.sender).totalEpochsCount());
+    return renderSvg(address(uint160(id)), IERC721Metadata(msg.sender).name(), result, period, process);
   }
 
   /**

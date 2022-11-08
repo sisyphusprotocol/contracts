@@ -1,7 +1,7 @@
 import { DeployFunction } from 'hardhat-deploy/types';
 
 const func: DeployFunction = async function ({ deployments, getNamedAccounts }) {
-  const { deploy, get } = deployments;
+  const { deploy, get, execute } = deployments;
   const { deployer } = await getNamedAccounts();
 
   const campaign = await get('Campaign');
@@ -24,6 +24,9 @@ const func: DeployFunction = async function ({ deployments, getNamedAccounts }) 
     },
     log: true,
   });
+
+  // set new campaign implementation
+  await execute('CampaignFactoryUpgradable', { from: deployer, log: true }, 'updateCampaignImplementation', campaign.address);
 };
 
 func.tags = ['CampaignFactory'];

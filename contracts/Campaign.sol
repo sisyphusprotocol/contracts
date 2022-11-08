@@ -27,11 +27,11 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
 
   string public campaignUri;
   uint256 public startTime;
-  uint256 public totalEpochsCount;
-  uint256 public period;
+  uint256 public override totalEpochsCount;
+  uint256 public override period;
 
   uint256 public lastEpochEndTime;
-  uint256 public currentEpoch;
+  uint256 public override currentEpoch;
 
   uint256 public _idx;
   uint256 public _challengeIdx;
@@ -47,53 +47,13 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
   mapping(uint256 => mapping(uint256 => Record)) public records;
 
   // tokenId => token status
-  mapping(uint256 => TokenProperty) public properties;
+  mapping(uint256 => TokenProperty) private s_properties;
 
   //challengeRecordId => tokenId => voter
   mapping(uint256 => mapping(uint256 => Voter)) public voters;
 
   //challengeRecordId => ChallengeRecord
   mapping(uint256 => ChallengeRecord) public challengeRecords;
-
-  //for voted: true = voted; false = not voted;
-  //for choice: true = think cheat; false = think not cheat;
-  struct Voter {
-    bool voted;
-    bool choice;
-  }
-
-  //for result: true = cheat; false = not cheat;
-  //for state: true = over; false = working;
-  //for legal: true = over 2/3; false = not enough voter;
-  struct ChallengeRecord {
-    uint256 challengerId;
-    uint256 cheaterId;
-    uint256 agreeCount;
-    uint256 disagreeCount;
-    uint256 challengeRiseTime;
-    bool result;
-    bool state;
-    bool legal;
-  }
-
-  struct TokenProperty {
-    TokenStatus tokenStatus;
-    uint256 pendingReward;
-  }
-
-  enum TokenStatus {
-    INVALID,
-    EXIT,
-    SIGNED,
-    ADMITTED,
-    ACHIEVED,
-    FAILED,
-    REKT
-  }
-
-  struct Record {
-    string contentUri;
-  }
 
   //
   // implementation cannot be initialize
@@ -146,8 +106,8 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
 
     _safeMint(msg.sender, tokenId);
 
-    properties[tokenId].tokenStatus = TokenStatus.SIGNED;
-    properties[tokenId].pendingReward = requiredAmount;
+    s_properties[tokenId].tokenStatus = TokenStatus.SIGNED;
+    s_properties[tokenId].pendingReward = requiredAmount;
 
     emit EvSignUp(tokenId);
   }
@@ -160,12 +120,12 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
     for (uint256 i = 0; i < allowlists.length; i++) {
       uint256 tokenId = allowlists[i];
 
-      TokenProperty memory property = properties[tokenId];
+      TokenProperty memory property = s_properties[tokenId];
 
       require(property.pendingReward == requiredAmount, 'Campaign: stake not match');
       require(property.tokenStatus == TokenStatus.SIGNED, 'Campaign: not signed up');
 
-      properties[tokenId].tokenStatus = TokenStatus.ADMITTED;
+      s_properties[tokenId].tokenStatus = TokenStatus.ADMITTED;
 
       emit EvRegisterSuccessfully(tokenId);
     }
@@ -182,11 +142,11 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
       uint256 tokenId = lists[i];
       bool targetStatus = targetStatuses[i];
       if (targetStatus) {
-        // require(properties[tokenId].tokenStatus == TokenStatus.SIGNED, 'Campaign: not signed');
-        properties[tokenId].tokenStatus = TokenStatus.ADMITTED;
+        // require(s_properties[tokenId].tokenStatus == TokenStatus.SIGNED, 'Campaign: not signed');
+        s_properties[tokenId].tokenStatus = TokenStatus.ADMITTED;
       } else {
-        // require(properties[tokenId].tokenStatus == TokenStatus.ADMITTED, 'Campaign: not admitted');
-        properties[tokenId].tokenStatus = TokenStatus.SIGNED;
+        // require(s_properties[tokenId].tokenStatus == TokenStatus.ADMITTED, 'Campaign: not admitted');
+        s_properties[tokenId].tokenStatus = TokenStatus.SIGNED;
       }
     }
     emit EvModifyRegistry(lists, targetStatuses);
@@ -274,11 +234,11 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
     challengeRecords[challengeRecordId].state = true;
 
     if (_result) {
-      properties[_cheaterId].tokenStatus = TokenStatus.FAILED;
+      s_properties[_cheaterId].tokenStatus = TokenStatus.FAILED;
 
-      uint256 _tranReward = properties[_cheaterId].pendingReward;
-      properties[_cheaterId].pendingReward = 0;
-      properties[challengeRecords[challengeRecordId].challengerId].pendingReward +=
+      uint256 _tranReward = s_properties[_cheaterId].pendingReward;
+      s_properties[_cheaterId].pendingReward = 0;
+      s_properties[challengeRecords[challengeRecordId].challengerId].pendingReward +=
         (_tranReward * Consts.challengerSuccessRatio) /
         Consts.SCALE;
       sharedReward += (_tranReward * Consts.successSharedRatio) / Consts.SCALE;
@@ -289,9 +249,9 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
       emit EvFailure(_cheaterId);
       emit EvCheat(_cheaterId);
     } else {
-      uint256 _tranReward = ((properties[_challengerId].pendingReward) * Consts.challengerFailRatio) / Consts.SCALE;
-      properties[challengeRecords[challengeRecordId].challengerId].pendingReward =
-        ((properties[challengeRecords[challengeRecordId].challengerId].pendingReward) *
+      uint256 _tranReward = ((s_properties[_challengerId].pendingReward) * Consts.challengerFailRatio) / Consts.SCALE;
+      s_properties[challengeRecords[challengeRecordId].challengerId].pendingReward =
+        ((s_properties[challengeRecords[challengeRecordId].challengerId].pendingReward) *
           (Consts.SCALE - Consts.challengerFailRatio)) /
         Consts.SCALE;
       sharedReward += (_tranReward * Consts.failSharedRatio) / Consts.SCALE;
@@ -387,6 +347,13 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
   }
 
   /**
+   * @dev read Token properties
+   */
+  function getTokenProperties(uint256 tokenId) external view override returns (TokenProperty memory) {
+    return s_properties[tokenId];
+  }
+
+  /**
    * @dev
    */
   function _claim(uint256 tokenId) private {
@@ -394,13 +361,13 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
       _settle();
     }
 
-    uint256 reward = properties[tokenId].pendingReward == 0
+    uint256 reward = s_properties[tokenId].pendingReward == 0
       ? 0
-      : properties[tokenId].pendingReward + sharedReward / successTokensCount;
+      : s_properties[tokenId].pendingReward + sharedReward / successTokensCount;
 
     IERC20Upgradeable(targetToken).safeTransfer(msg.sender, reward);
 
-    properties[tokenId].pendingReward = 0;
+    s_properties[tokenId].pendingReward = 0;
 
     emit EvClaimReward(tokenId, reward);
   }
@@ -428,11 +395,12 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
       for (uint256 j = 0; j < totalEpochsCount; j++) {
         string memory content = records[j][tokenId].contentUri;
         if (bytes(content).length == 0) {
-          uint256 penalty = properties[tokenId].pendingReward;
+          uint256 penalty = s_properties[tokenId].pendingReward;
           hostReward += (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
           protocolFee += (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
           sharedReward += penalty - hostReward - protocolFee;
-          properties[tokenId].pendingReward = 0;
+          s_properties[tokenId].pendingReward = 0;
+          s_properties[tokenId].tokenStatus = TokenStatus.FAILED;
           successTokensCount = successTokensCount - 1;
           emit EvFailure(tokenId);
           break;
@@ -456,11 +424,11 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
       for (uint256 j = 0; j < totalEpochsCount; j++) {
         string memory content = records[j][tokenId].contentUri;
         if (bytes(content).length == 0) {
-          uint256 penalty = properties[tokenId].pendingReward;
+          uint256 penalty = s_properties[tokenId].pendingReward;
           hostReward += (penalty * Consts.HOST_REWARD) / Consts.DECIMAL;
           protocolFee += (penalty * Consts.PROTOCOL_FEE) / Consts.DECIMAL;
           sharedReward += penalty - hostReward - protocolFee;
-          properties[tokenId].pendingReward = 0;
+          s_properties[tokenId].pendingReward = 0;
           successTokensCount = successTokensCount - 1;
           emit EvFailure(tokenId);
           break;
@@ -503,7 +471,7 @@ contract Campaign is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Automatio
   }
 
   function _getAdmitted(uint256 tokenId) internal view {
-    require(properties[tokenId].tokenStatus == TokenStatus.ADMITTED, 'Campaign: not admitted');
+    require(s_properties[tokenId].tokenStatus == TokenStatus.ADMITTED, 'Campaign: not admitted');
   }
 
   function _readChallengeExist(uint256 challengeRecordId) private view {
