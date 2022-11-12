@@ -55,19 +55,21 @@ const setupTest = deployments.createFixture(
     await campaign.connect(A).checkIn('ipfs://', tokenIdMap[A.address]);
 
     // should A cannot challenge himself
-    await expect(campaign.connect(A).challenge(tokenIdMap[A.address], tokenIdMap[A.address])).to.be.revertedWith(
+    await expect(campaign.connect(A).challenge(tokenIdMap[A.address], tokenIdMap[A.address], 0)).to.be.revertedWith(
       'Campaign: cannot challenge self',
     );
 
     // should challenge on be half of the other fail
-    await expect(campaign.connect(B).challenge(tokenIdMap[A.address], tokenIdMap[B.address])).to.be.revertedWith(
+    await expect(campaign.connect(B).challenge(tokenIdMap[A.address], tokenIdMap[B.address], 0)).to.be.revertedWith(
       'Campaign: not token holder',
     );
 
     // should B start challenge successfully
-    await expect(campaign.connect(B).challenge(tokenIdMap[B.address], tokenIdMap[A.address]))
+    await expect(campaign.connect(B).challenge(tokenIdMap[B.address], tokenIdMap[A.address], 0))
       .to.be.emit(campaign, 'EvChallenge')
       .withArgs(tokenIdMap[B.address], tokenIdMap[A.address], 0);
+
+    expect((await campaign.challengeRecords(0)).epoch).to.be.equal(0);
 
     return {
       testErc20: testErc20,

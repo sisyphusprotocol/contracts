@@ -18,6 +18,7 @@ interface ICampaign {
   struct ChallengeRecord {
     uint256 challengerId;
     uint256 cheaterId;
+    uint256 epoch;
     uint256 agreeCount;
     uint256 disagreeCount;
     uint256 challengeRiseTime;
@@ -89,7 +90,11 @@ interface ICampaign {
 
   function withdraw() external;
 
-  function challenge(uint256, uint256) external;
+  function challenge(
+    uint256,
+    uint256,
+    uint256
+  ) external;
 
   function vote(
     uint256,

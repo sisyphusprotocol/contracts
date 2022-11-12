@@ -169,7 +169,11 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     emit EvCheckIn(currentEpoch, tokenId, contentUri);
   }
 
-  function challenge(uint256 challengerId, uint256 cheaterId)
+  function challenge(
+    uint256 challengerId,
+    uint256 cheaterId,
+    uint256 epoch
+  )
     external
     override
     onlyTokenHolder(challengerId)
@@ -185,6 +189,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     challengeRecords[challengeRecordId].challengerId = challengerId;
     challengeRecords[challengeRecordId].cheaterId = cheaterId;
     challengeRecords[challengeRecordId].challengeRiseTime = block.timestamp;
+    challengeRecords[challengeRecordId].epoch = epoch;
 
     emit EvChallenge(challengerId, cheaterId, challengeRecordId);
   }
