@@ -22,16 +22,24 @@ library Consts {
   uint256 public constant PROTOCOL_FEE = 10**5;
   uint256 public constant HOST_REWARD = 2 * 10**5;
 
-  // challenge
-  uint8 constant legalVoterRatio = 66;
-  uint8 constant cheaterRatio = 30;
-  uint8 constant challengerSuccessRatio = 60;
-  uint8 constant successSharedRatio = 30;
-  uint8 constant successProtocolRatio = 10;
-  uint8 constant challengerFailRatio = 40;
-  uint8 constant failSharedRatio = 75;
-  uint8 constant failProtocolRatio = 25;
-  uint8 constant SCALE = 100;
+  /// @dev challenge related constant, in percent
+  /// @dev minimal required vote ratio for a valid challenge judgement
+  uint8 public constant legalVoterRatio = 66;
+  /// @dev the campaign exit if enough people are challenged as cheater
+  uint8 public constant cheaterRatio = 30;
+  /// @dev if challenge success, how many shared to challenger
+  uint8 public constant challengerSuccessRatio = 60;
+  /// @dev if challenge success, how many shared to voter
+  uint8 public constant successSharedRatio = 30;
+  /// @dev if challenge success, how many shared to protocol
+  uint8 public constant successProtocolRatio = 10;
+  /// @dev if challenge fail, how many decrease
+  uint8 public constant challengerFailRatio = 40;
+  /// @dev if challenge fail, how many shared to voter
+  uint8 public constant failSharedRatio = 75;
+  /// @dev if challenge success, how many shared to protocol
+  uint8 public constant failProtocolRatio = 25;
+  uint8 public constant SCALE = 100;
 
   bytes32 public constant SALT = keccak256(abi.encode('Sisyphus Protocol'));
 
