@@ -12,12 +12,12 @@ contract Renderer is IRenderer {
   // caller must be Campaign Contract
   function renderTokenById(uint256 id) public view override returns (string memory) {
     uint256 dayCount = (ICampaign(msg.sender).period() * ICampaign(msg.sender).totalEpochsCount()) / 86400;
-    string memory period = string(abi.encode(Strings.toString(dayCount), 'Days'));
+    string memory period = string(abi.encodePacked(Strings.toString(dayCount), ' Days'));
     string memory result = ICampaign(msg.sender).getTokenProperties(id).tokenStatus == ICampaign.TokenStatus.FAILED
-      ? 'Bravo'
-      : 'Failed';
+      ? 'Failed'
+      : 'Bravo';
     uint256 process = ((ICampaign(msg.sender).currentEpoch() + 1) * 100) / (ICampaign(msg.sender).totalEpochsCount());
-    return renderSvg(address(uint160(id)), IERC721Metadata(msg.sender).name(), result, period, process);
+    return renderSvg(IERC721(msg.sender).ownerOf(id), IERC721Metadata(msg.sender).name(), result, period, process);
   }
 
   /**
@@ -38,15 +38,15 @@ contract Renderer is IRenderer {
       string(
         abi.encodePacked(
           '<svg width="114" height="175" fill="none" xmlns="http://www.w3.org/2000/svg"><g filter="url(#prefix__filter0_d_774_3790)"><rect x="2" width="110" height="171.459" rx="8.715" fill="url(#prefix__paint0_linear_774_3790)" shape-rendering="crispEdges"/></g><text dx="60" dy="18" dominant-baseline="central" text-anchor="middle" style="height:100px" font-size="7" fill="#000">',
-          _shortenAddr(addr),
+          string(_shortenAddr(addr)),
           '</text><text dx="55" dy="110" dominant-baseline="central" text-anchor="middle" style="height:100px" font-size="7" fill="#000">',
-          result,
+          string(result),
           '</text><text dx="60" dy="140" dominant-baseline="central" text-anchor="middle" style="height:100px" font-size="6" fill="#000">',
-          name,
+          string(name),
           '</text><text dx="60" dy="154" dominant-baseline="central" text-anchor="middle" style="height:100px" font-size="7" fill="#000">',
-          period,
+          string(period),
           '</text><g filter="url(#prefix__filter1_dd_774_3790)" shape-rendering="crispEdges"><circle cx="19.811" cy="17.42" r="10.765" fill="#D9D9D9" fill-opacity=".39"/><circle cx="19.811" cy="17.42" r="10.329" stroke="#000" stroke-opacity=".5" stroke-width=".872"/></g><rect x="17.267" y="117.438" width="82" height="6.655" rx="3.327" fill="#fff"/><rect x="17.267" y="117.438" width="',
-          _calculateProgressNumber(process),
+          string(_calculateProgressNumber(process)),
           '" height="6.655" rx="3.327" fill="#FD93FF"/><defs><filter id="prefix__filter0_d_774_3790" x=".257" y="0" width="113.486" height="174.945" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/><feOffset dy="1.743"/><feGaussianBlur stdDeviation=".872"/><feComposite in2="hardAlpha" operator="out"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/><feBlend in2="BackgroundImageFix" result="effect1_dropShadow_774_3790"/><feBlend in="SourceGraphic" in2="effect1_dropShadow_774_3790" result="shape"/></filter><filter id="prefix__filter1_dd_774_3790" x="7.303" y="6.655" width="25.016" height="25.016" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/><feOffset dy="1.743"/><feGaussianBlur stdDeviation=".872"/><feComposite in2="hardAlpha" operator="out"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/><feBlend in2="BackgroundImageFix" result="effect1_dropShadow_774_3790"/><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/><feOffset dy="1.743"/><feGaussianBlur stdDeviation=".872"/><feComposite in2="hardAlpha" operator="out"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"/><feBlend in2="effect1_dropShadow_774_3790" result="effect2_dropShadow_774_3790"/><feBlend in="SourceGraphic" in2="effect2_dropShadow_774_3790" result="shape"/></filter><linearGradient id="prefix__paint0_linear_774_3790" x1="57" y1="0" x2="57" y2="171.459" gradientUnits="userSpaceOnUse"><stop stop-color="#FDFBC2"/><stop offset="1" stop-color="#CF70D5" stop-opacity=".27"/></linearGradient></defs></svg>'
         )
       );
