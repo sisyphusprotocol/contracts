@@ -57,6 +57,8 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
   //challengeRecordId => ChallengeRecord
   mapping(uint256 => ChallengeRecord) public challengeRecords;
 
+  mapping(bytes32 => bool) public challengedRecords;
+
   constructor(IRenderer render_) {
     render = render_;
   }
@@ -183,6 +185,9 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     onlyChallengeAllowed
   {
     require(challengerId != cheaterId, 'Campaign: cannot challenge self');
+    require(!challengedRecords[keccak256(abi.encode(cheaterId, epoch))], 'Campaign: already challenged');
+    challengedRecords[keccak256(abi.encode(cheaterId, epoch))] = true;
+
     uint256 challengeRecordId = _challengeIdx;
     _challengeIdx += 1;
 

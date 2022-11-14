@@ -69,6 +69,11 @@ const setupTest = deployments.createFixture(
       .to.be.emit(campaign, 'EvChallenge')
       .withArgs(tokenIdMap[B.address], tokenIdMap[A.address], 0);
 
+    // should B challenge on a record twice fail
+    await expect(campaign.connect(B).challenge(tokenIdMap[B.address], tokenIdMap[A.address], 0)).to.be.revertedWith(
+      'Campaign: already challenged',
+    );
+
     expect((await campaign.challengeRecords(0)).epoch).to.be.equal(0);
 
     return {
