@@ -5,6 +5,7 @@ import { CampaignBase, TestERC20 } from '../typechain';
 
 const requiredAmount = 10n * 10n ** 18n;
 const dayLength = 86400;
+const defaultChallengeLength = 86400;
 
 const setupTest = deployments.createFixture(
   // eslint-disable-next-line no-unused-vars
@@ -25,6 +26,7 @@ const setupTest = deployments.createFixture(
       now + dayLength / 2,
       dayLength,
       30,
+      defaultChallengeLength,
       'ipfs://',
     );
 

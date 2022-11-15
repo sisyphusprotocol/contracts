@@ -6,6 +6,7 @@ import { expect } from 'chai';
 
 const requiredAmount = 10n * 10n ** 18n;
 const dayLength = 86400;
+const defaultChallengeLength = 86400;
 
 const setupTest = deployments.createFixture(
   // eslint-disable-next-line no-unused-vars
@@ -30,8 +31,9 @@ const setupTest = deployments.createFixture(
       'TestCampaign',
       'TC',
       now + dayLength / 2,
-      dayLength,
       30,
+      dayLength,
+      defaultChallengeLength,
       'ipfs://',
     );
 
@@ -201,5 +203,14 @@ describe('CampaignChallenge', function () {
 
     // could not judge again
     await expect(campaign.judgement(0)).to.be.revertedWith('Challenge: already judged');
+  });
+
+  it('Should vote after challenge end fail', async () => {
+    const { campaign, users, tokenIdMap } = await setupTest();
+
+    await TimeGo(86400);
+
+    const u = users[0];
+    await expect(campaign.connect(u).vote(tokenIdMap[u.address], 0, true)).to.be.revertedWith('Challenge: ended');
   });
 });

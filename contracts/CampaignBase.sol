@@ -31,6 +31,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
   uint256 public startTime;
   uint256 public override totalEpochsCount;
   uint256 public override period;
+  uint256 public override challengeLength;
 
   uint256 public lastEpochEndTime;
   uint256 public override currentEpoch;
@@ -72,6 +73,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     uint256 startTime_,
     uint256 totalPeriod_,
     uint256 periodLength_,
+    uint256 challengeLength_,
     string memory campaignUri_
   ) public override initializer {
     require(address(token_) != address(0), 'Campaign: invalid token');
@@ -86,6 +88,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     lastEpochEndTime = startTime_;
     totalEpochsCount = totalPeriod_;
     period = periodLength_;
+    challengeLength = challengeLength_;
     campaignUri = campaignUri_;
   }
 
@@ -554,12 +557,12 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
   }
 
   modifier onlyChallengeNotEnded(uint256 challengeRecordId) {
-    require(block.timestamp < challengeRecords[challengeRecordId].challengeRiseTime + 7 days, 'Challenge: ended');
+    require(block.timestamp < challengeRecords[challengeRecordId].challengeRiseTime + challengeLength, 'Challenge: ended');
     _;
   }
 
   modifier onlyChallengeEnded(uint256 challengeRecordId) {
-    require(block.timestamp >= challengeRecords[challengeRecordId].challengeRiseTime + 7 days, 'Challenge: not ended');
+    require(block.timestamp > challengeRecords[challengeRecordId].challengeRiseTime + challengeLength, 'Challenge: not ended');
     _;
   }
 

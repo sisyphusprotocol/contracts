@@ -55,6 +55,7 @@ interface ICampaign {
     uint256 startTime_,
     uint256 totalPeriod_,
     uint256 periodLength_,
+    uint256 challengeLength_,
     string memory campaignUri_
   ) external;
 
@@ -65,6 +66,8 @@ interface ICampaign {
   function period() external view returns (uint256);
 
   function currentEpoch() external view returns (uint256);
+
+  function challengeLength() external view returns (uint256);
 
   function getTokenProperties(uint256 tokenId) external view returns (TokenProperty memory);
 

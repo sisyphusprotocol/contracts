@@ -10,6 +10,7 @@ const requiredAmount = 10n * 10n ** 18n;
 const protocolRecipient = '0xd8da6bf26964af9d7eed9e03e53415d37aa96045';
 const PROTOCOL_FEE = 10n ** 5n;
 const HOST_REWARD = 2n * 10n ** 5n;
+const challengeLength = 86400;
 
 const setupTest = deployments.createFixture(
   // eslint-disable-next-line no-unused-vars
@@ -48,13 +49,35 @@ describe('CampaignFactoryUpgradable', function () {
       'Campaign',
       await campaignFactory
         .connect(host)
-        .callStatic.createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 2, 86400, 'ipfs://Qmxxxx', '0x'),
+        .callStatic.createCampaign(
+          testErc20.address,
+          requiredAmount,
+          'Test',
+          'T',
+          startTime,
+          2,
+          86400,
+          challengeLength,
+          'ipfs://Qmxxxx',
+          '0x',
+        ),
     );
 
     await expect(
       campaignFactory
         .connect(host)
-        .createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 2, 86400, 'ipfs://Qmxxxx', '0x'),
+        .createCampaign(
+          testErc20.address,
+          requiredAmount,
+          'Test',
+          'T',
+          startTime,
+          2,
+          86400,
+          challengeLength,
+          'ipfs://Qmxxxx',
+          '0x',
+        ),
     )
       .to.be.emit(campaignFactory, 'EvCampaignCreated')
       .withArgs(host.address, campaign.address);
@@ -104,13 +127,35 @@ describe('CampaignFactoryUpgradable', function () {
       'Campaign',
       await campaignFactory
         .connect(host)
-        .callStatic.createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 3, 86400, 'ipfs://Qmxxxx', '0x'),
+        .callStatic.createCampaign(
+          testErc20.address,
+          requiredAmount,
+          'Test',
+          'T',
+          startTime,
+          3,
+          86400,
+          challengeLength,
+          'ipfs://Qmxxxx',
+          '0x',
+        ),
     );
 
     await expect(
       campaignFactory
         .connect(host)
-        .createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 3, 86400, 'ipfs://Qmxxxx', '0x'),
+        .createCampaign(
+          testErc20.address,
+          requiredAmount,
+          'Test',
+          'T',
+          startTime,
+          3,
+          86400,
+          challengeLength,
+          'ipfs://Qmxxxx',
+          '0x',
+        ),
     )
       .to.be.emit(campaignFactory, 'EvCampaignCreated')
       .withArgs(host.address, campaign.address);
@@ -204,11 +249,22 @@ describe('CampaignFactoryUpgradable', function () {
       'Campaign',
       await campaignFactory
         .connect(host)
-        .callStatic.createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 3, 60, 'ipfs://Qmxxxx', '0x'),
+        .callStatic.createCampaign(
+          testErc20.address,
+          requiredAmount,
+          'Test',
+          'T',
+          startTime,
+          3,
+          60,
+          challengeLength,
+          'ipfs://Qmxxxx',
+          '0x',
+        ),
     );
     await campaignFactory
       .connect(host)
-      .createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 3, 60, 'ipfs://Qmxxxx', '0x');
+      .createCampaign(testErc20.address, requiredAmount, 'Test', 'T', startTime, 3, 60, challengeLength, 'ipfs://Qmxxxx', '0x');
 
     // should upkeepNeed to false after before campaign start
     const { upkeepNeeded: upkeepNeededShouldFalse } = await campaign.checkUpkeep('0x');

@@ -13,6 +13,7 @@ interface ICampaignFactory {
     uint256 startTime,
     uint256 totalPeriod,
     uint256 periodLength,
+    uint256 challengeLength,
     string calldata campaignUri,
     bytes calldata zero
   ) external returns (address campaign);

@@ -55,6 +55,7 @@ contract CampaignFactoryUpgradable is
     uint256 startTime,
     uint256 totalPeriod,
     uint256 periodLength,
+    uint256 challengeLength,
     string calldata campaignUri,
     // please set to 0x
     bytes calldata zero
@@ -81,7 +82,18 @@ contract CampaignFactoryUpgradable is
       )
     );
 
-    ICampaign(campaign).initialize(msg.sender, token, amount, name, symbol, startTime, totalPeriod, periodLength, campaignUri);
+    ICampaign(campaign).initialize(
+      msg.sender,
+      token,
+      amount,
+      name,
+      symbol,
+      startTime,
+      totalPeriod,
+      periodLength,
+      challengeLength,
+      campaignUri
+    );
 
     // register chainLink keepUp
     _registerAndPredictID(
