@@ -9,6 +9,8 @@ import 'hardhat-deploy';
 import '@typechain/hardhat';
 import 'hardhat-gas-reporter';
 import 'solidity-coverage';
+import 'hardhat-tracer';
+import 'hardhat-log-remover';
 import '@openzeppelin/hardhat-upgrades';
 import { parseEther } from 'ethers/lib/utils';
 import { BigNumber } from 'ethers';

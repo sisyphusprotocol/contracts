@@ -117,7 +117,9 @@ describe('CampaignChallenge', function () {
     // time pass and the challenge can be judged
     await TimeGo(86400 * 8);
 
-    await expect(campaign.judgement(0)).to.be.revertedWith('Challenge: not enough voter');
+    await expect(campaign.judge(0)).to.be.emit(campaign, 'EvJudgement').withArgs(0);
+    // 1 means vote not enough
+    expect((await campaign.challengeRecords(0)).result).to.be.equal(1);
   });
 
   it('Should B challenge successfully work properly', async () => {
@@ -144,7 +146,7 @@ describe('CampaignChallenge', function () {
     await TimeGo(86400 * 8);
 
     // make judgement to the challenge
-    await expect(campaign.judgement(0))
+    await expect(campaign.judge(0))
       .to.be.emit(campaign, 'EvFailure')
       .withArgs(tokenIdMap[A.address])
       .emit(campaign, 'EvCheat')
@@ -164,7 +166,7 @@ describe('CampaignChallenge', function () {
     expect(await campaign.protocolFee()).to.be.equal((requiredAmount * 10n) / 100n);
 
     // could not judge again
-    await expect(campaign.judgement(0)).to.be.revertedWith('Challenge: already judged');
+    await expect(campaign.judge(0)).to.be.revertedWith('Challenge: already judged');
   });
 
   it('Should B challenge fail work properly', async () => {
@@ -191,7 +193,7 @@ describe('CampaignChallenge', function () {
     await TimeGo(86400 * 8);
 
     // make judgement to the challenge
-    await expect(campaign.judgement(0)).to.be.emit(campaign, 'EvJudgement').withArgs(0);
+    await expect(campaign.judge(0)).to.be.emit(campaign, 'EvJudgement').withArgs(0);
 
     // check value
     // a value doesn't change
@@ -202,7 +204,7 @@ describe('CampaignChallenge', function () {
     expect(await campaign.protocolFee()).to.be.equal((requiredAmount * 10n) / 100n);
 
     // could not judge again
-    await expect(campaign.judgement(0)).to.be.revertedWith('Challenge: already judged');
+    await expect(campaign.judge(0)).to.be.revertedWith('Challenge: already judged');
   });
 
   it('Should vote after challenge end fail', async () => {
@@ -212,5 +214,21 @@ describe('CampaignChallenge', function () {
 
     const u = users[0];
     await expect(campaign.connect(u).vote(tokenIdMap[u.address], 0, true)).to.be.revertedWith('Challenge: ended');
+  });
+
+  it('Should keepUp judge challenge successfully', async () => {
+    const { campaign } = await setupTest();
+
+    await TimeGo(86400);
+
+    // should update epoch
+    const { upkeepNeeded: uKN1, performData: pD1 } = await campaign.checkUpkeep('0x');
+    expect(uKN1).to.be.equal(true);
+    await expect(campaign.performUpkeep(pD1)).to.be.emit(campaign, 'EpochUpdated').withArgs(1);
+
+    // should judge challenge
+    const { upkeepNeeded: uKN2, performData: pD2 } = await campaign.checkUpkeep('0x');
+    expect(uKN2).to.be.equal(true);
+    await expect(campaign.performUpkeep(pD2)).to.be.emit(campaign, 'EvJudgement').withArgs(0);
   });
 });

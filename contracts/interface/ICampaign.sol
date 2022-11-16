@@ -22,9 +22,15 @@ interface ICampaign {
     uint256 agreeCount;
     uint256 disagreeCount;
     uint256 challengeRiseTime;
-    bool result;
-    bool state;
-    bool legal;
+    ChallengeResult result;
+    bool judged;
+  }
+
+  enum ChallengeResult {
+    NOT_DECIDED,
+    VOTE_NOT_ENOUGH,
+    PASS,
+    NOT_PASS
   }
 
   struct TokenProperty {
@@ -105,7 +111,7 @@ interface ICampaign {
     bool
   ) external;
 
-  function judgement(uint256) external;
+  function judge(uint256) external;
 
   function forceEnd() external;
 

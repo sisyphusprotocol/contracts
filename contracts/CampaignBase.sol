@@ -15,8 +15,6 @@ import './interface/IRenderer.sol';
 
 import { Consts } from './Consts.sol';
 
-import 'hardhat/console.sol';
-
 // TODO: merkle tree root to valid user, don't use enumerable
 contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, AutomationCompatible {
   using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -57,6 +55,8 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
 
   //challengeRecordId => ChallengeRecord
   mapping(uint256 => ChallengeRecord) public challengeRecords;
+
+  uint256[] public challengeList;
 
   mapping(bytes32 => bool) public challengedRecords;
 
@@ -199,6 +199,8 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     challengeRecords[challengeRecordId].challengeRiseTime = block.timestamp;
     challengeRecords[challengeRecordId].epoch = epoch;
 
+    challengeList.push(challengeRecordId);
+
     emit EvChallenge(challengerId, cheaterId, challengeRecordId);
   }
 
@@ -232,25 +234,33 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     emit EvVote(tokenId, challengeRecordId);
   }
 
-  function judgement(uint256 challengeRecordId)
-    external
+  function judge(uint256 challengeRecordId)
+    public
     override
     onlyChallengeEnded(challengeRecordId)
     onlyChallengeExist(challengeRecordId)
     onlyNotJudged(challengeRecordId)
   {
+
     uint256 _challengerId = challengeRecords[challengeRecordId].challengerId;
     uint256 _cheaterId = challengeRecords[challengeRecordId].cheaterId;
     uint256 _count = challengeRecords[challengeRecordId].agreeCount + challengeRecords[challengeRecordId].disagreeCount;
 
+    // if vote is not enough
     /// @dev _idx subtract 2 since the challenger and cheater cannot vote
-    require(_count > ((_idx - 2) * Consts.legalVoterRatio) / Consts.SCALE, 'Challenge: not enough voter');
+    if (_count <= ((_idx - 2) * Consts.legalVoterRatio) / Consts.SCALE) {
+      challengeRecords[challengeRecordId].result = ChallengeResult.VOTE_NOT_ENOUGH;
+      challengeRecords[challengeRecordId].judged = true;
+      challengeJudgedCount += 1;
 
-    challengeJudgedCount += 1;
+      emit EvJudgement(challengeRecordId);
+
+      return;
+    }
 
     bool _result = (challengeRecords[challengeRecordId].agreeCount > challengeRecords[challengeRecordId].disagreeCount);
-    challengeRecords[challengeRecordId].result = _result;
-    challengeRecords[challengeRecordId].state = true;
+    challengeRecords[challengeRecordId].result = _result ? ChallengeResult.PASS : ChallengeResult.NOT_PASS;
+    challengeRecords[challengeRecordId].judged = true;
 
     if (_result) {
       s_properties[_cheaterId].tokenStatus = TokenStatus.FAILED;
@@ -322,25 +332,47 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     // check whether the campaign end
     if (block.timestamp > startTime + totalEpochsCount * period) {
       upkeepNeeded = true;
-      performData = abi.encode(uint256(0));
+      // uint256(0) for a placeholder
+      performData = abi.encode(uint256(0), uint256(0));
       return (upkeepNeeded, performData);
       // check whether it's time to update epoch
     } else if (block.timestamp > lastEpochEndTime + period) {
       upkeepNeeded = true;
-      performData = abi.encode(uint256(1));
+      // uint256(0) for a placeholder
+      performData = abi.encode(uint256(1), uint256(0));
       return (upkeepNeeded, performData);
+    }
+    // check whether challenge end
+    for (uint256 i = 0; i < challengeList.length; i++) {
+      uint256 challengeId = challengeList[i];
+      if (
+        // if the challenge id exist
+        challengeId < _challengeIdx &&
+        // if voting stage is ended and the challenge is not judged
+        challengeRecords[challengeId].judged == false &&
+        block.timestamp > challengeRecords[challengeId].challengeRiseTime + challengeLength
+      ) {
+        upkeepNeeded = true;
+        performData = abi.encode(uint256(2), challengeId);
+        return (upkeepNeeded, performData);
+      }
     }
   }
 
   /**
-   *
+   * @dev  types task to do
+   * 0: settle the campaign
+   * 1: checkEpoch
+   * 2: judge challenge
    */
   function performUpkeep(bytes calldata performData) external override {
-    uint256 kind = abi.decode(performData, (uint256));
+    (uint256 kind, uint256 challengeId) = abi.decode(performData, (uint256, uint256));
     if (kind == 0) {
       _settle();
     } else if (kind == 1) {
       _checkEpoch();
+    } else if (kind == 2) {
+      judge(challengeId);
     } else {
       revert('Nothing To DO');
     }
@@ -572,7 +604,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
   }
 
   modifier onlyNotJudged(uint256 challengeRecordId) {
-    require(challengeRecords[challengeRecordId].state == false, 'Challenge: already judged');
+    require(challengeRecords[challengeRecordId].judged == false, 'Challenge: already judged');
     _;
   }
 

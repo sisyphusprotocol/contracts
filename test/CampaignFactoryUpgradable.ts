@@ -276,25 +276,27 @@ describe('CampaignFactoryUpgradable', function () {
     await TimeGo(61);
     const { upkeepNeeded, performData } = await campaign.checkUpkeep('0x');
     expect(upkeepNeeded).to.be.equal(true);
-    expect(performData).to.be.equals(defaultAbiCoder.encode(['uint256'], [1]));
-    expect(campaign.performUpkeep(performData)).to.be.emit(campaign, 'EpochUpdated').withArgs(1);
+    expect(performData).to.be.equals(defaultAbiCoder.encode(['uint256', 'uint256'], [1, 0]));
+    await expect(campaign.performUpkeep(performData)).to.be.emit(campaign, 'EpochUpdated').withArgs(1);
 
     // should upkeepNeed to false after performUpKeep
-    const { upkeepNeeded: upkeepNeededShouldFalseEither } = await campaign.checkUpkeep('0x');
+    const { upkeepNeeded: upkeepNeededShouldFalseEither, performData: pD } = await campaign.checkUpkeep('0x');
+
+    console.log(performData, pD);
     expect(upkeepNeededShouldFalseEither).to.be.equal(false);
 
     // time pass and should checkEpoch again
     await TimeGo(60);
     const { upkeepNeeded: upkeepNeeded2, performData: performData2 } = await campaign.checkUpkeep('0x');
     expect(upkeepNeeded2).to.be.equal(true);
-    expect(performData2).to.be.equals(defaultAbiCoder.encode(['uint256'], [1]));
+    expect(performData2).to.be.equals(defaultAbiCoder.encode(['uint256', 'uint256'], [1, 0]));
     expect(campaign.performUpkeep(performData2)).to.be.emit(campaign, 'EpochUpdated').withArgs(2);
 
     // time pass and should settle finally
     await TimeGo(60);
     const { upkeepNeeded: upkeepNeeded3, performData: performData3 } = await campaign.checkUpkeep('0x');
     expect(upkeepNeeded3).to.be.equal(true);
-    expect(performData3).to.be.equals(defaultAbiCoder.encode(['uint256'], [0]));
+    expect(performData3).to.be.equals(defaultAbiCoder.encode(['uint256', 'uint256'], [0, 0]));
     expect(campaign.performUpkeep(performData3)).to.be.emit(campaign, 'EvSettle').withArgs(deployer.address);
   });
 });
