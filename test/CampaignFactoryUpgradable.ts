@@ -101,9 +101,7 @@ describe('CampaignFactoryUpgradable', function () {
 
     await TimeGo(86400);
     // await campaign.claim(0);
-    await expect(campaign.connect(host).claimAndWithdraw(0))
-      .to.be.emit(testErc20, 'Transfer')
-      .withArgs(campaign.address, host.address, (requiredAmount * 2n) / 10n);
+    await expect(campaign.connect(host).claim(0)).to.changeTokenBalances(testErc20, [host], [(requiredAmount * 2n) / 10n]);
 
     expect(await testErc20.balanceOf(host.address)).to.be.equal((requiredAmount * 2n) / 10n);
   });
@@ -218,10 +216,7 @@ describe('CampaignFactoryUpgradable', function () {
       );
     }
 
-    await campaign.connect(host).claim(holderInfo[host.address]);
-    expect(await testErc20.balanceOf(host.address)).to.be.equal(0);
-
-    await expect(campaign.connect(host).withdraw()).to.changeTokenBalances(
+    await expect(campaign.connect(host).claim(holderInfo[host.address])).to.changeTokenBalances(
       testErc20,
       [
         host,
@@ -274,15 +269,14 @@ describe('CampaignFactoryUpgradable', function () {
     await TimeGo(86400);
     // time pass and should checkEpoch
     await TimeGo(61);
-    const { upkeepNeeded, performData } = await campaign.checkUpkeep('0x');
+    const { upkeepNeeded, performData: pD } = await campaign.checkUpkeep('0x');
     expect(upkeepNeeded).to.be.equal(true);
-    expect(performData).to.be.equals(defaultAbiCoder.encode(['uint256', 'uint256'], [1, 0]));
-    await expect(campaign.performUpkeep(performData)).to.be.emit(campaign, 'EpochUpdated').withArgs(1);
+    expect(pD).to.be.equals(defaultAbiCoder.encode(['uint256', 'uint256'], [1, 0]));
+    await expect(campaign.performUpkeep(pD)).to.be.emit(campaign, 'EpochUpdated').withArgs(1);
 
     // should upkeepNeed to false after performUpKeep
-    const { upkeepNeeded: upkeepNeededShouldFalseEither, performData: pD } = await campaign.checkUpkeep('0x');
+    const { upkeepNeeded: upkeepNeededShouldFalseEither } = await campaign.checkUpkeep('0x');
 
-    console.log(performData, pD);
     expect(upkeepNeededShouldFalseEither).to.be.equal(false);
 
     // time pass and should checkEpoch again

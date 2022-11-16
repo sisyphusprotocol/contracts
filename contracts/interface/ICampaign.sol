@@ -93,7 +93,7 @@ interface ICampaign {
   function settle() external;
 
   // user claim reward after campaign ended
-  function claim(uint256 tokenId) external;
+  function claim(uint256 tokenId) external returns (uint256 userBonus, uint256 hostBonus);
 
   function claimAndWithdraw(uint256 tokenId) external;
 

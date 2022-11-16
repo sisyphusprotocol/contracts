@@ -241,7 +241,6 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     onlyChallengeExist(challengeRecordId)
     onlyNotJudged(challengeRecordId)
   {
-
     uint256 _challengerId = challengeRecords[challengeRecordId].challengerId;
     uint256 _cheaterId = challengeRecords[challengeRecordId].cheaterId;
     uint256 _count = challengeRecords[challengeRecordId].agreeCount + challengeRecords[challengeRecordId].disagreeCount;
@@ -297,15 +296,25 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
   /**
    * @dev everyone can call the function to settle reward
    */
-  function settle() external override {
+  function settle() external override onlyAllJudged {
     _settle();
   }
 
   /**
    * @dev user claim reward after campaign settled
    */
-  function claim(uint256 tokenId) external override onlyTokenHolder(tokenId) onlyAllJudged {
-    _claim(tokenId);
+  function claim(uint256 tokenId)
+    external
+    override
+    onlyTokenHolder(tokenId)
+    onlyAllJudged
+    returns (uint256 userBonus, uint256 hostBonus)
+  {
+    userBonus = _claim(tokenId);
+
+    if (msg.sender == owner()) {
+      hostBonus = _withdraw();
+    }
   }
 
   /**
@@ -407,7 +416,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
   /**
    * @dev
    */
-  function _claim(uint256 tokenId) private {
+  function _claim(uint256 tokenId) private returns (uint256) {
     if (status != Consts.CampaignStatus.SETTLED) {
       _settle();
     }
@@ -421,12 +430,13 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     s_properties[tokenId].pendingReward = 0;
 
     emit EvClaimReward(tokenId, reward);
+    return reward;
   }
 
   /**
    * @dev host withdraw host reward
    */
-  function _withdraw() private {
+  function _withdraw() private returns (uint256) {
     uint256 reward = hostReward;
     hostReward = 0;
 
@@ -435,6 +445,8 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     IERC20Upgradeable(targetToken).safeTransfer(Consts.PROTOCOL_RECIPIENT, protocolFee);
 
     emit EvWithDraw(msg.sender, reward, protocolFee);
+
+    return reward;
   }
 
   /**
