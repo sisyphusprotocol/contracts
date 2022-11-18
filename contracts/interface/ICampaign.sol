@@ -65,6 +65,8 @@ interface ICampaign {
     string memory campaignUri_
   ) external;
 
+  function startTime() external view returns (uint256);
+
   function status() external view returns (Consts.CampaignStatus);
 
   function totalEpochsCount() external view returns (uint256);

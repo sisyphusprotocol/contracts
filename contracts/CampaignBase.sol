@@ -26,7 +26,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
   Consts.CampaignStatus public override status;
 
   string public campaignUri;
-  uint256 public startTime;
+  uint256 public override startTime;
   uint256 public override totalEpochsCount;
   uint256 public override period;
   uint256 public override challengeLength;
@@ -455,6 +455,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
   function _settle() private onlyEnded {
     successTokensCount = _idx;
     for (uint256 tokenId = 0; tokenId < _idx; tokenId++) {
+      s_properties[tokenId].tokenStatus = TokenStatus.ACHIEVED;
       for (uint256 j = 0; j < totalEpochsCount; j++) {
         string memory content = records[j][tokenId].contentUri;
         if (bytes(content).length == 0) {
