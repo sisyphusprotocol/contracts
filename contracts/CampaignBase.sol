@@ -92,6 +92,10 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     campaignUri = campaignUri_;
   }
 
+  /** 
+   * @dev set Campaign Uri
+   * @param newUri new uri
+   */
   function setCampaignUri(string calldata newUri) external override onlyOwner {
     campaignUri = newUri;
     emit EvCampaignUriSet(campaignUri);
@@ -99,6 +103,7 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
 
   /**
    * @dev delay the startTime
+   * @param delaySeconds how long to delay the start time
    */
   function delayStartTime(uint256 delaySeconds) external onlyOwner {
     if (block.timestamp >= startTime) {
