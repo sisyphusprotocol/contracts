@@ -97,6 +97,17 @@ contract CampaignBase is ICampaign, OwnableUpgradeable, ERC721Upgradeable, Autom
     emit EvCampaignUriSet(campaignUri);
   }
 
+  /**
+   * @dev delay the startTime
+   */
+  function delayStartTime(uint256 delaySeconds) external onlyOwner {
+    if (block.timestamp >= startTime) {
+      revert DelayStartTooLate();
+    }
+    startTime += delaySeconds;
+    emit StartTimeDelay(startTime);
+  }
+
   //
   /**
    * @dev user stake token and want to participate this campaign

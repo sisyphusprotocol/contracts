@@ -5,6 +5,9 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import { Consts } from '../Consts.sol';
 
 interface ICampaign {
+  /// @dev delay too late.
+  error DelayStartTooLate();
+
   //for voted: true = voted; false = not voted;
   //for choice: true = think cheat; false = think not cheat;
   struct Voter {
@@ -121,6 +124,8 @@ interface ICampaign {
   event EpochUpdated(uint256 currentEpoch);
 
   event EvCampaignUriSet(string newUri);
+
+  event StartTimeDelay(uint256 newStartTime);
 
   event EvSignUp(uint256 tokenId);
 

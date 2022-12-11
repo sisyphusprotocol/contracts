@@ -5,8 +5,8 @@ export async function getCurrentTime() {
   return (await ethers.provider.getBlock(await ethers.provider.getBlockNumber())).timestamp;
 }
 
-export async function TimeGo(s: number) {
-  await network.provider.send('evm_mine', [(await getCurrentTime()) + s]);
+export async function TimeGo(s: number | BigInt) {
+  await network.provider.send('evm_mine', [(await getCurrentTime()) + Number(s)]);
 }
 
 export async function getContract<T extends Contract>(contractName: string) {
